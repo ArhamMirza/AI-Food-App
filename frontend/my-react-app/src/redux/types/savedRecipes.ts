@@ -1,0 +1,1 @@
+export type SavedRecipe = string; // Recipe ID
