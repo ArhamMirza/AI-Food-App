@@ -17,7 +17,6 @@ function App() {
         <Route path="/create-recipe" element={<CreateRecipe/>}/>
 
 
-
       </Routes>
     </div>
   )
