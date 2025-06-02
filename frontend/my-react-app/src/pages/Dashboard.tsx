@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChefHat, Sparkles, Bot, Utensils, BookOpen, LogOut, Home, Plus, Calendar, Search, Menu, X, MessageSquare, Maximize, Minimize, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChefHat, Sparkles, Bot, Utensils, LogOut, Home, Plus, Calendar, Search, Menu, X, MessageSquare, Maximize, Minimize, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../redux/hooks';
 import { logout } from '../redux/slices/userSlice';
 import { fetchSavedRecipes } from '../redux/slices/savedRecipesSlice';
@@ -24,6 +24,7 @@ const Dashboard: React.FC = () => {
   const recipeDetails = useAppSelector(state => state.savedRecipes.recipeDetails);
   const mealPlans = useAppSelector(state => state.mealPlans.plans);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
   const [scrollY, setScrollY] = useState<number>(0);
   const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
   const [isChatExpanded, setIsChatExpanded] = useState<boolean>(false);
@@ -76,8 +77,8 @@ const Dashboard: React.FC = () => {
     { icon: <LogOut className="w-6 h-6" />, label: 'Logout', href: '#logout' },
   ];
 
-  const currentDate = new Date(2025, 4, 31);
-  const startDate = new Date(2025, 4, 31);
+  const currentDate = new Date();
+  const startDate = new Date(currentDate);
   startDate.setDate(currentDate.getDate() + weekOffset * 7);
   const calendarDays = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(startDate);
@@ -93,7 +94,7 @@ const Dashboard: React.FC = () => {
 
   const weekStart = calendarDays[0];
   const weekEnd = calendarDays[6];
-  const weekHeader = `Your Meal Plan - ${weekStart.month} ${weekStart.dayNumber} - ${weekEnd.month} ${weekEnd.dayNumber}, 2025`;
+  const weekHeader = `Your Meal Plan - ${weekStart.month} ${weekStart.dayNumber} - ${weekEnd.month} ${weekEnd.dayNumber}, ${currentDate.getFullYear()}`;
 
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden flex">
@@ -103,10 +104,15 @@ const Dashboard: React.FC = () => {
         <div className="absolute bottom-20 left-1/2 w-72 h-72 bg-green-600 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
       </div>
 
-      <SidebarNav isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
+      <SidebarNav 
+        isSidebarOpen={isSidebarOpen} 
+        setIsSidebarOpen={setIsSidebarOpen}
+        isCollapsed={isCollapsed}
+        setIsCollapsed={setIsCollapsed}
+      />
 
-      <div className="flex-1 flex flex-col md:ml-64">
-        <header className={`fixed top-0 left-0 md:left-64 right-0 z-40 transition-all duration-300 ${scrollY > 50 ? 'bg-black/80 backdrop-blur-sm border-b border-gray-800' : ''}`}>
+      <div className={`flex-1 flex flex-col transition-all duration-300 ${isCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
+        <header className={`fixed top-0 right-0 z-40 transition-all duration-300 ${isCollapsed ? 'left-0 md:left-16' : 'left-0 md:left-64'} ${scrollY > 50 ? 'bg-black/80 backdrop-blur-sm border-b border-gray-800' : ''}`}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <button
@@ -213,34 +219,31 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
               <div className="bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-2xl p-6">
-                <div className="grid grid-cols-1 sm:grid-cols-7 gap-4 text-center mb-4">
-                  {calendarDays.map((day) => (
-                    <div key={day.dateStr} className="text-gray-300 font-semibold">
-                      {day.dayName}
-                    </div>
-                  ))}
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-7 gap-4 text-center">
+                <div className="grid grid-cols-1 sm:grid-cols-7 gap-4">
                   {calendarDays.map((day) => {
                     const meal = mealPlans[day.dateStr];
                     return (
-                      <div
-                        key={day.dateStr}
-                        className={`p-4 rounded-lg ${
-                          day.isCurrentDay
-                            ? 'bg-green-600/50 border border-green-500'
-                            : 'bg-gray-800/50 hover:bg-gray-700/50'
-                        } transition-all duration-200 min-h-[120px] flex flex-col justify-between`}
-                      >
-                        <div className="text-gray-300 font-semibold">
-                          {day.month} {day.dayNumber}
+                      <div key={day.dateStr} className="flex flex-col">
+                        <div className="text-center text-gray-300 font-semibold mb-2">
+                          {day.dayName}
                         </div>
-                        <p className="text-gray-400 text-sm mb-2">{meal?.meal || 'No meal planned'}</p>
-                        {meal ? (
-                          <button className="text-green-400 hover:text-green-300 text-sm">View Recipe</button>
-                        ) : (
-                          <button className="text-green-400 hover:text-green-300 text-sm">Add Meal</button>
-                        )}
+                        <div
+                          className={`p-4 rounded-lg ${
+                            day.isCurrentDay
+                              ? 'bg-green-600/50 border border-green-500'
+                              : 'bg-gray-800/50 hover:bg-gray-700/50'
+                          } transition-all duration-200 min-h-[120px] flex flex-col justify-between text-center`}
+                        >
+                          <div className="text-gray-300 font-semibold">
+                            {day.month} {day.dayNumber}
+                          </div>
+                          <p className="text-gray-400 text-sm mb-2">{meal?.meal || 'No meal planned'}</p>
+                          {meal ? (
+                            <button className="text-green-400 hover:text-green-300 text-sm">View Recipe</button>
+                          ) : (
+                            <button className="text-green-400 hover:text-green-300 text-sm">Add Meal</button>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -322,12 +325,12 @@ const Dashboard: React.FC = () => {
           </div>
         )}
 
-        <footer className="border-t border-gray-800 py-8 px-4 md:pl-8">
+        <footer className={`border-t border-gray-800 py-8 px-4 transition-all duration-300 ${isCollapsed ? 'md:pl-20' : 'md:pl-8'}`}>
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
               <div className="relative">
                 <ChefHat className="w-8 h-8 text-green-400" />
-                <Sparkles className="w-4 h-4 text-green-4 absolute -top-1 -right-1 animate-pulse" />
+                <Sparkles className="w-4 h-4 text-green-400 absolute -top-1 -right-1 animate-pulse" />
               </div>
               <span className="text-xl font-bold">Food AI Assistant</span>
             </div>
