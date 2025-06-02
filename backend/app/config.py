@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     
     # Frontend URL
     FRONTEND_URL: str = "http://localhost:5173"
+
+    #AI Chat
+    GROQ_API_KEY: str= ""
+    RECIPE_API_URL: str = "http://localhost:8000/api/v1/recipe/search"
+    
     
     class Config:
         env_file = "app/.env"

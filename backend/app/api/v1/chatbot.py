@@ -4,16 +4,14 @@ import uvicorn
 from typing import Optional
 from app.services.chat_service import ChatService, RecipeSearchRequest, RecipeSearchResponse
 from app.models.chat import ChatMessage,ChatResponse
+from app.config import settings
+
 
 router = APIRouter()
 
-# Initialize ChatService
-GROQ_API_KEY = "REDACTED"
-RECIPE_API_URL = "http://localhost:8000/api/v1/recipe/search"
-
 chat_service = ChatService(
-    groq_api_key=GROQ_API_KEY,
-    recipe_api_url=RECIPE_API_URL
+    groq_api_key=settings.GROQ_API_KEY,
+    recipe_api_url=settings.RECIPE_API_URL
 )
 
 @router.post("/chat", response_model=ChatResponse)
