@@ -189,16 +189,25 @@ class ChatService:
             Conversation history or None if not found
         """
         return self.conversations.get(conversation_id)
+    
+    async def generate_unique_conversation_id(self) -> str:
+        while True:
+            new_id = str(uuid.uuid4())
+            existing = await ChatSchema.find_by_conversation_id(new_id)
+            if not existing:
+                return new_id
 
 
-    async def process_message(self, message: str, user_id: str, conversation_id: Optional[str] = None, search: bool = False) -> tuple[str, str]:
+    async def process_message(
+        self, message: str, user_id: str, conversation_id: str, search: bool = False
+    ) -> tuple[str, str]:
         """
-        Process a user message and return AI response
+        Process a user message and return AI response.
 
         Args:
             message: User's message
             user_id: User identifier
-            conversation_id: Existing conversation ID (optional)
+            conversation_id: Existing conversation ID
             search: Whether to force tool call
 
         Returns:
@@ -207,45 +216,30 @@ class ChatService:
 
         def sanitize_messages(messages: list[dict]) -> list[dict]:
             allowed_keys = {"role", "content", "name"}
+            return [{k: v for k, v in msg.items() if k in allowed_keys} for msg in messages]
 
-            def sanitize(msg):
-                return {k: v for k, v in msg.items() if k in allowed_keys}
+        # Load conversation (must already exist)
+        chat_doc = await ChatSchema.find_by_conversation_id(conversation_id)
+        if not chat_doc:
+            raise ValueError("Conversation does not exist. Create it before sending messages.")
 
-            return [sanitize(m) for m in messages]
-
-
-        # Load or create conversation
-        if conversation_id:
-            chat_doc = await ChatSchema.find_by_conversation_id(conversation_id)
-            if not chat_doc:
-                conversation_id = str(uuid.uuid4())
-                conversation_history = [self.get_system_message()]
-                await ChatSchema.create(conversation_id, user_id, initial_message=self.get_system_message())
-            else:
-                conversation_history = chat_doc["messages"]
-        else:
-            conversation_id = str(uuid.uuid4())
-            conversation_history = [self.get_system_message()]
-            await ChatSchema.create(conversation_id, user_id, initial_message=self.get_system_message())
+        conversation_history = chat_doc["messages"]
 
         # Add user message
         user_msg = {"role": "user", "content": message}
         conversation_history.append(user_msg)
         await ChatSchema.append_message(conversation_id, user_msg)
 
-        # Sanitize conversation_history before API call
+        # Sanitize conversation history
         sanitized_history = sanitize_messages(conversation_history)
 
-        # Prepare API call
+        # Call model
         if search:
             response = self.groq_client.chat.completions.create(
                 model=self.model,
                 messages=sanitized_history,
                 tools=self.tools,
-                tool_choice={
-                    "type": "function",
-                    "function": {"name": "call_recipe_api"}
-                },
+                tool_choice={"type": "function", "function": {"name": "call_recipe_api"}},
                 max_tokens=4096
             )
         else:
@@ -257,20 +251,16 @@ class ChatService:
 
         response_message = response.choices[0].message
 
-        # Tool call flow
+        # Tool call handling
         tool_calls = response_message.tool_calls
         if tool_calls:
             conversation_history = await self.handle_tool_calls(tool_calls, conversation_history)
-
-            # Sanitize again before second API call
             sanitized_history = sanitize_messages(conversation_history)
-
             second_response = self.groq_client.chat.completions.create(
                 model=self.model,
                 messages=sanitized_history,
                 max_tokens=4096
             )
-
             final_content = second_response.choices[0].message.content
             assistant_msg = {"role": "assistant", "content": final_content}
             conversation_history.append(assistant_msg)

@@ -5,6 +5,7 @@ import EmailVerificationPage from './pages/EmailVerificationPage'
 import HomeLandingPage from './pages/HomeLandingPage'
 import Dashboard from './pages/Dashboard'
 import CreateRecipe from './pages/CreateRecipe'
+import ChatPage from './pages/ChatPage'
 function App() {
 
   return (
@@ -15,6 +16,8 @@ function App() {
         <Route path="/verify-email" element={<EmailVerificationPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/create-recipe" element={<CreateRecipe/>}/>
+        <Route path="/chat" element={<ChatPage/>}/>
+
 
 
       </Routes>
