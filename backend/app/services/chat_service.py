@@ -3,12 +3,17 @@ import json
 import httpx
 from typing import Dict, List, Any, Optional
 from pydantic import BaseModel, Field
+from datetime import datetime
+from typing import Optional
 
 # Import your existing models (assuming they're in a separate file)
 from app.models.recipe import RecipeSearchRequest, RecipeSearchResponse
+from app.schemas.chat_schema import ChatSchema  # Make sure this import is valid
+import uuid
+
 
 class ChatService:
-    def __init__(self, groq_api_key: str, recipe_api_url: str = "http://localhost:8000/api/v1/recipe/search", model: str = "llama-3.3-70b-versatile"):
+    def __init__(self, groq_api_key: str, recipe_api_url: str = "http://localhost:8000/api/v1/recipe/search", model: str = "llama3-70b-8192"):
         """
         Initialize the ChatService
         
@@ -27,7 +32,7 @@ class ChatService:
             {
                 "type": "function",
                 "function": {
-                    "name": "search_recipes",
+                    "name": "call_recipe_api",
                     "description": (
                         "Searches for recipes by calling the recipe API. "
                         "Use this ONLY when the user is asking for recipes, cooking instructions, or food-related searches. "
@@ -75,13 +80,16 @@ class ChatService:
             "role": "system",
             "content": (
                 "You are a helpful AI cooking and recipe assistant that can handle both general questions and recipe searches. "
-                "For recipe-related queries (cooking, food recipes, ingredients, meal planning), use the search_recipes function. "
+                "For recipe-related queries (cooking, food recipes, ingredients, meal planning), use call_recipe_api function. "
                 "Only add filters that the user specifically mentions and don't make them up - leave them blank such as cuisine_type, meal_type, diet, health. "
                 "The recipe_query should only contain the name of the dish and not the region. "
                 "For all other queries (general knowledge, conversations, non-food topics), respond normally without using any tools. "
                 "Be friendly, helpful, and conversational. When providing recipes, format them nicely for easy reading with all details mentioned in the content. "
                 "Do not hallucinate anything when searching for recipes, only provide information fetched. "
                 "Do not output any code or gibberish, only human-like text."
+                "If you encounter error in retrieving the recipe from net, suggest your own recipe"
+                "When giving instructions make sure you number correctly starting from 1,2,3....."
+                
             )
         }
 
@@ -148,7 +156,7 @@ class ChatService:
         for tool_call in tool_calls:
             function_name = tool_call.function.name
             
-            if function_name == "search_recipes":
+            if function_name == "call_recipe_api":
                 try:
                     function_args = json.loads(tool_call.function.arguments)
                     params = RecipeSearchRequest(**function_args)
@@ -182,109 +190,94 @@ class ChatService:
         """
         return self.conversations.get(conversation_id)
 
-    def create_conversation(self, conversation_id: str) -> List[Dict[str, Any]]:
-        """
-        Create a new conversation
-        
-        Args:
-            conversation_id: Conversation identifier
-            
-        Returns:
-            New conversation history with system message
-        """
-        conversation_history = [self.get_system_message()]
-        self.conversations[conversation_id] = conversation_history
-        return conversation_history
 
-    def delete_conversation(self, conversation_id: str) -> bool:
-        """
-        Delete a conversation
-        
-        Args:
-            conversation_id: Conversation identifier
-            
-        Returns:
-            True if deleted, False if not found
-        """
-        if conversation_id in self.conversations:
-            del self.conversations[conversation_id]
-            return True
-        return False
-
-    def list_conversations(self) -> List[str]:
-        """
-        List all conversation IDs
-        
-        Returns:
-            List of conversation IDs
-        """
-        return list(self.conversations.keys())
-
-    async def process_message(self, message: str, conversation_id: Optional[str] = None) -> tuple[str, str]:
+    async def process_message(self, message: str, user_id: str, conversation_id: Optional[str] = None, search: bool = False) -> tuple[str, str]:
         """
         Process a user message and return AI response
-        
+
         Args:
-            message: User message
-            conversation_id: Optional conversation ID
-            
+            message: User's message
+            user_id: User identifier
+            conversation_id: Existing conversation ID (optional)
+            search: Whether to force tool call
+
         Returns:
-            Tuple of (ai_response, conversation_id)
+            Tuple of (AI response, conversation_id)
         """
-        # Initialize or get conversation history
-        print(conversation_id)
-        if conversation_id and conversation_id in self.conversations:
-            conversation_history = self.conversations[conversation_id]
+
+        def sanitize_messages(messages: list[dict]) -> list[dict]:
+            allowed_keys = {"role", "content", "name"}
+
+            def sanitize(msg):
+                return {k: v for k, v in msg.items() if k in allowed_keys}
+
+            return [sanitize(m) for m in messages]
+
+
+        # Load or create conversation
+        if conversation_id:
+            chat_doc = await ChatSchema.find_by_conversation_id(conversation_id)
+            if not chat_doc:
+                conversation_id = str(uuid.uuid4())
+                conversation_history = [self.get_system_message()]
+                await ChatSchema.create(conversation_id, user_id, initial_message=self.get_system_message())
+            else:
+                conversation_history = chat_doc["messages"]
         else:
-            conversation_id = f"{len(self.conversations)+1}"
-            conversation_history = self.create_conversation(conversation_id)
-        
-        # Add user message to conversation
-        conversation_history.append({
-            "role": "user",
-            "content": message,
-        })
-        
-        # Get AI response
-        response = self.groq_client.chat.completions.create(
-            model=self.model,
-            messages=conversation_history,
-            tools=self.tools,
-            tool_choice="auto",
-            max_tokens=4096
-        )
-        
+            conversation_id = str(uuid.uuid4())
+            conversation_history = [self.get_system_message()]
+            await ChatSchema.create(conversation_id, user_id, initial_message=self.get_system_message())
+
+        # Add user message
+        user_msg = {"role": "user", "content": message}
+        conversation_history.append(user_msg)
+        await ChatSchema.append_message(conversation_id, user_msg)
+
+        # Sanitize conversation_history before API call
+        sanitized_history = sanitize_messages(conversation_history)
+
+        # Prepare API call
+        if search:
+            response = self.groq_client.chat.completions.create(
+                model=self.model,
+                messages=sanitized_history,
+                tools=self.tools,
+                tool_choice={
+                    "type": "function",
+                    "function": {"name": "call_recipe_api"}
+                },
+                max_tokens=4096
+            )
+        else:
+            response = self.groq_client.chat.completions.create(
+                model=self.model,
+                messages=sanitized_history,
+                max_tokens=4096
+            )
+
         response_message = response.choices[0].message
-        
-        # Check if the model wants to use tools
+
+        # Tool call flow
         tool_calls = response_message.tool_calls
         if tool_calls:
-            # Handle tool calls
             conversation_history = await self.handle_tool_calls(tool_calls, conversation_history)
-            
-            # Get final response after tool execution
+
+            # Sanitize again before second API call
+            sanitized_history = sanitize_messages(conversation_history)
+
             second_response = self.groq_client.chat.completions.create(
                 model=self.model,
-                messages=conversation_history
+                messages=sanitized_history,
+                max_tokens=4096
             )
-            
+
             final_content = second_response.choices[0].message.content
-            
-            # Add final response to conversation history
-            conversation_history.append({
-                "role": "assistant",
-                "content": final_content
-            })
-            
+            assistant_msg = {"role": "assistant", "content": final_content}
+            conversation_history.append(assistant_msg)
+            await ChatSchema.append_message(conversation_id, assistant_msg)
             return final_content, conversation_id
         else:
-            # No tools needed, just respond normally
-            assistant_response = response_message.content
-            
-            # Add response to conversation history
-            conversation_history.append({
-                "role": "assistant",
-                "content": assistant_response
-            })
-            
-            return assistant_response, conversation_id
+            assistant_msg = {"role": "assistant", "content": response_message.content}
+            conversation_history.append(assistant_msg)
+            await ChatSchema.append_message(conversation_id, assistant_msg)
+            return response_message.content, conversation_id
