@@ -15,12 +15,27 @@ chat_service = ChatService(
 )
 
 @router.post("/chat", response_model=ChatResponse)
+async def chat_endpoint(chat_message: ChatMessage, user_id:str,conversation_id: Optional[str] = None,search:bool = False):
+    """Main chat endpoint"""
+    try:
+        response, conv_id = await chat_service.process_message(
+            message=chat_message.message,
+            user_id = user_id,
+            conversation_id=conversation_id,
+            search = search
+        )
+        return ChatResponse(response=response, conversation_id=conv_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+@router.post("/chat-search", response_model=ChatResponse)
 async def chat_endpoint(chat_message: ChatMessage, conversation_id: Optional[str] = None):
     """Main chat endpoint"""
     try:
         response, conv_id = await chat_service.process_message(
             message=chat_message.message,
-            conversation_id=conversation_id
+            conversation_id=conversation_id,
+            search = True
         )
         return ChatResponse(response=response, conversation_id=conv_id)
     except Exception as e:

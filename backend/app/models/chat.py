@@ -1,9 +1,9 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List, Union
+from typing import Optional
 
 class ChatMessage(BaseModel):
     message: str
 
 class ChatResponse(BaseModel):
     response: str
-    conversation_id: Optional[str]
+    conversation_id: Optional[str] 

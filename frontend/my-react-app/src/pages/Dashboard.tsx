@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChefHat, Sparkles, Bot, Utensils, LogOut, Home, Plus, Calendar, Search, Menu, X, MessageSquare, Maximize, Minimize, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChefHat, Sparkles, Bot, Utensils, LogOut, Home, Plus, Calendar, Search, Menu, X, MessageSquare, Maximize, Minimize, ChevronLeft, ChevronRight, Send, Loader } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../redux/hooks';
 import { logout } from '../redux/slices/userSlice';
 import { fetchSavedRecipes } from '../redux/slices/savedRecipesSlice';
@@ -15,6 +15,16 @@ interface Message {
   id: number;
   text: string;
   isUser: boolean;
+  timestamp?: Date;
+}
+
+interface ChatResponse {
+  response: string;
+  conversation_id: string;
+}
+
+interface ChatRequest {
+  message: string;
 }
 
 const Dashboard: React.FC = () => {
@@ -29,10 +39,15 @@ const Dashboard: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
   const [isChatExpanded, setIsChatExpanded] = useState<boolean>(false);
   const [messages, setMessages] = useState<Message[]>([
-    { id: 1, text: 'Hello! How can I assist you with your cooking today?', isUser: false },
+    { id: 1, text: 'Hello! How can I assist you with your cooking today?', isUser: false, timestamp: new Date() },
   ]);
   const [newMessage, setNewMessage] = useState<string>('');
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [weekOffset, setWeekOffset] = useState<number>(0);
+
+  // API base URL - adjust this to match your FastAPI backend URL
+  const API_BASE_URL = 'http://localhost:8000/api/v1';
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -46,17 +61,139 @@ const Dashboard: React.FC = () => {
     }
   }, [dispatch, user?.saved_recipes]);
 
-  const handleSendMessage = () => {
-    if (newMessage.trim()) {
-      setMessages([...messages, { id: messages.length + 1, text: newMessage, isUser: true }]);
-      setNewMessage('');
-      setTimeout(() => {
-        setMessages((prev) => [
-          ...prev,
-          { id: prev.length + 1, text: 'Let me find a recipe for you!', isUser: false },
-        ]);
-      }, 500);
+  // Load conversation history when chat opens
+  useEffect(() => {
+    if (isChatOpen && conversationId) {
+      loadConversationHistory();
     }
+  }, [isChatOpen, conversationId]);
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('access_token');
+    return {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    };
+  };
+
+  const loadConversationHistory = async () => {
+    if (!conversationId) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/chatbot/conversations/${conversationId}`, {
+        headers: getAuthHeaders()
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.messages && data.messages.length > 0) {
+          const formattedMessages: Message[] = data.messages.map((msg: any, index: number) => ({
+            id: index + 1,
+            text: msg.content || msg.message,
+            isUser: msg.role === 'user',
+            timestamp: new Date(msg.timestamp || Date.now())
+          }));
+          setMessages(formattedMessages);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading conversation history:', error);
+    }
+  };
+
+  const sendMessageToAPI = async (message: string): Promise<ChatResponse> => {
+    const requestBody: ChatRequest = { message };
+    const url = conversationId 
+      ? `${API_BASE_URL}/chatbot/chat?conversation_id=${conversationId}`
+      : `${API_BASE_URL}/chatbot/chat`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  };
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || isLoading) return;
+
+    const userMessage = newMessage.trim();
+    const userMessageObj: Message = {
+      id: messages.length + 1,
+      text: userMessage,
+      isUser: true,
+      timestamp: new Date()
+    };
+
+    // Add user message to chat immediately
+    setMessages(prev => [...prev, userMessageObj]);
+    setNewMessage('');
+    setIsLoading(true);
+
+    try {
+      const response = await sendMessageToAPI(userMessage);
+      
+      // Update conversation ID if this is the first message
+      if (!conversationId && response.conversation_id) {
+        setConversationId(response.conversation_id);
+      }
+
+      // Add bot response
+      const botMessageObj: Message = {
+        id: messages.length + 2,
+        text: response.response,
+        isUser: false,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, botMessageObj]);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      
+      // Add error message
+      const errorMessageObj: Message = {
+        id: messages.length + 2,
+        text: 'Sorry, I encountered an error. Please try again later.',
+        isUser: false,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, errorMessageObj]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const clearConversation = async () => {
+    if (conversationId) {
+      try {
+        await fetch(`${API_BASE_URL}/chatbot/conversations/${conversationId}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+      } catch (error) {
+        console.error('Error deleting conversation:', error);
+      }
+    }
+    
+    setMessages([
+      { id: 1, text: 'Hello! How can I assist you with your cooking today?', isUser: false, timestamp: new Date() }
+    ]);
+    setConversationId(null);
   };
 
   const handleLogout = () => {
@@ -270,8 +407,18 @@ const Dashboard: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <Bot className="w-6 h-6 text-green-400" />
                 <span className="font-semibold text-green-400">Cooking Assistant</span>
+                {conversationId && (
+                  <span className="text-xs text-gray-500">#{conversationId.slice(-8)}</span>
+                )}
               </div>
               <div className="flex items-center space-x-2">
+                <button
+                  className="text-gray-300 hover:text-red-400 text-xs px-2 py-1 rounded"
+                  onClick={clearConversation}
+                  title="Clear conversation"
+                >
+                  Clear
+                </button>
                 <button
                   className="text-gray-300 hover:text-white"
                   onClick={() => setIsChatExpanded(!isChatExpanded)}
@@ -299,26 +446,45 @@ const Dashboard: React.FC = () => {
                         : 'bg-gray-800/50 text-gray-300'
                     }`}
                   >
-                    {message.text}
+                    <div className="whitespace-pre-wrap">{message.text}</div>
+                    {message.timestamp && (
+                      <div className="text-xs opacity-70 mt-1">
+                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
+              {isLoading && (
+                <div className="mb-3 flex justify-start">
+                  <div className="bg-gray-800/50 text-gray-300 p-3 rounded-lg flex items-center space-x-2">
+                    <Loader className="w-4 h-4 animate-spin" />
+                    <span>Thinking...</span>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="p-4 border-t border-gray-800">
               <div className="flex space-x-2">
-                <input
-                  type="text"
+                <textarea
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Ask about recipes..."
-                  className="flex-1 p-2 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Ask about recipes, cooking tips, meal planning..."
+                  className="flex-1 p-2 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                  rows={1}
+                  onKeyPress={handleKeyPress}
+                  disabled={isLoading}
                 />
                 <button
-                  className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded-lg"
+                  className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={handleSendMessage}
+                  disabled={isLoading || !newMessage.trim()}
                 >
-                  Send
+                  {isLoading ? (
+                    <Loader className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
                 </button>
               </div>
             </div>
