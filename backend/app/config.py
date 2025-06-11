@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     DATABASE_NAME: str = "food_assistant_db"
     
     # JWT
-    SECRET_KEY: str = "your-super-secret-key-change-this-in-production"
+    SECRET_KEY: str = ""
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
@@ -34,9 +34,14 @@ class Settings(BaseSettings):
     #AI Chat
     GROQ_API_KEY: str= ""
     RECIPE_API_URL: str = "http://localhost:8000/api/v1/recipe/search"
+
+    # Google search api
+    GOOGLE_CSE_ID: str = ""
+    GOOGLE_API_KEY: str = ""
     
     
     class Config:
         env_file = "app/.env"
 
 settings = Settings()
+print(settings.MONGODB_URL)

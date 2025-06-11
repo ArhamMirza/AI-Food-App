@@ -1,10 +1,21 @@
 from fastapi import APIRouter, Depends, BackgroundTasks
+from typing import Dict, Any, List
 from fastapi import HTTPException, status
 import json
-from app.models.recipe import RecipeSearchRequest, RecipeSearchResponse
+from app.models.recipe import RecipeSearchRequest, RecipeSearchResponse, RecipeResponse, RecipeListResponse
+from app.schemas.recipe_schema import RecipeSchema
 from app.services.recipe_service import handle_recipe_function_call
+from app.config import settings
 
 router = APIRouter()
+
+def document_to_recipe_response(doc: Dict[str, Any]) -> RecipeResponse:
+    return RecipeResponse(
+        recipe_id=str(doc["_id"]),
+        user_id=str(doc["user_id"]),
+        title=doc["title"],
+        content=doc["content"],
+    )
 
 @router.post("/search", response_model=RecipeSearchResponse)
 async def search_recipes(request: RecipeSearchRequest):
@@ -26,7 +37,6 @@ async def search_recipes(request: RecipeSearchRequest):
         
         # Call the existing function
         result = handle_recipe_function_call(arguments_json)
-        print(result)
         
         # Check if result indicates an error
         if result.startswith("Error") or result.startswith("Please provide"):
@@ -42,6 +52,30 @@ async def search_recipes(request: RecipeSearchRequest):
             message="Recipe search completed successfully"
         )
         
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
+
+@router.get("/{user_id}", response_model=RecipeListResponse)
+async def get_recipes_by_user(user_id: str):
+    """
+    Get all recipes for a given user.
+
+    Args:
+        user_id: ID of the user
+
+    Returns:
+        List of recipes
+    """
+    try:
+        recipes = await RecipeSchema.find_by_user_id(user_id)
+        return RecipeListResponse(
+            success=True,
+            data=[document_to_recipe_response(doc) for doc in recipes],
+            message="Recipes retrieved successfully"
+        )
     except Exception as e:
         raise HTTPException(
             status_code=500,

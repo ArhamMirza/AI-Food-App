@@ -8,3 +8,5 @@ def convert_objectid_in_doc(doc):
     if isinstance(doc, ObjectId):
         return str(doc)
     return doc
+
+
