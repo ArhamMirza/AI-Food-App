@@ -7,3 +7,7 @@ class ChatMessage(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     conversation_id: Optional[str] 
+
+class UpdateMessageRequest(BaseModel):
+    content: str
+    role: Optional[str] = "assistant"

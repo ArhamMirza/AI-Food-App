@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class ChatSchema:
     @staticmethod
-    async def create(conversation_id: str, user_id: str, initial_message: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def create(conversation_id: str, user_id: str, title:str, initial_message: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Create a new chat conversation in MongoDB.
 
@@ -32,6 +32,7 @@ class ChatSchema:
         conversation_data = {
             "conversation_id": conversation_id,
             "user_id": ObjectId(user_id),
+            "title": title,
             "messages": messages,
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
@@ -132,6 +133,46 @@ class ChatSchema:
             }
         )
         return result.modified_count > 0
+    
+    @staticmethod
+    async def update_message(conversation_id: str, message_index: int, content: str, role: str) -> bool:
+        """
+        Update a specific message in a conversation by index.
+
+        Args:
+            conversation_id: Unique identifier for the conversation
+            message_index: Index of the message to update in the messages array
+            content: New content of the message
+            role: New role of the message (e.g., 'user', 'assistant')
+
+        Returns:
+            True if updated successfully, False if conversation or message not found
+        """
+        db = await get_database()
+
+        # Fetch the conversation
+        conversation = await db.conversations.find_one({"conversation_id": conversation_id})
+        if not conversation or message_index >= len(conversation.get("messages", [])):
+            return False
+
+        # Build the dynamic field update path
+        content_path = f"messages.{message_index}.content"
+        role_path = f"messages.{message_index}.role"
+        timestamp_path = f"messages.{message_index}.timestamp"
+
+        result = await db.conversations.update_one(
+            {"conversation_id": conversation_id},
+            {
+                "$set": {
+                    content_path: content,
+                    role_path: role,
+                    timestamp_path: datetime.utcnow(),
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+        return result.modified_count > 0
+
 
     @staticmethod
     async def delete(conversation_id: str) -> bool:

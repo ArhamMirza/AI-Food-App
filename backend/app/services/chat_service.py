@@ -13,7 +13,7 @@ import uuid
 
 
 class ChatService:
-    def __init__(self, groq_api_key: str, recipe_api_url: str = "http://localhost:8000/api/v1/recipe/search", model: str = "llama3-70b-8192"):
+    def __init__(self, groq_api_key: str, recipe_api_url: str = "http://localhost:8000/api/v1/recipe/search", model: str = "meta-llama/llama-4-maverick-17b-128e-instruct"):
         """
         Initialize the ChatService
         
@@ -34,11 +34,7 @@ class ChatService:
                 "function": {
                     "name": "call_recipe_api",
                     "description": (
-                        "Searches for recipes by calling the recipe API. "
-                        "Use this ONLY when the user is asking for recipes, cooking instructions, or food-related searches. "
-                        "Supports filters for cuisine, meal type, diet, and health restrictions. "
-                        "Do not make up your own filters, only extract meaningful data from the user input. "
-                        "Do NOT use this for general questions, greetings, or non-food related queries."
+                        "Searches the web for information. "
                     ),
                     "parameters": {
                         "type": "object",
@@ -79,16 +75,14 @@ class ChatService:
         return {
             "role": "system",
             "content": (
-                "You are a helpful AI cooking and recipe assistant that can handle both general questions and recipe searches. "
-                "For recipe-related queries (cooking, food recipes, ingredients, meal planning), use call_recipe_api function. "
-                "Only add filters that the user specifically mentions and don't make them up - leave them blank such as cuisine_type, meal_type, diet, health. "
-                "The recipe_query should only contain the name of the dish and not the region. "
-                "For all other queries (general knowledge, conversations, non-food topics), respond normally without using any tools. "
-                "Be friendly, helpful, and conversational. When providing recipes, format them nicely for easy reading with all details mentioned in the content. "
+                "You are a helpful highly knowledgable and professional AI cooking and recipe assistant that can handle questions related to food and cooking and recipe searches only. Do not answer queries that are not related to food or cooking"
+                "The recipe_query should contain the user query formatted as a concise google search query"
+                "Be friendly, helpful, and conversational with personality. When providing recipes, format them nicely for easy reading in list form with all details such as serving,ingredients, instructions etc. Dont use asteriks (*) "
+                "Make sure to consider user preferences, user cooking level and dietery restrictions and adjust recipes accordingly."
                 "Do not hallucinate anything when searching for recipes, only provide information fetched. "
                 "Do not output any code or gibberish, only human-like text."
-                "If you encounter error in retrieving the recipe from net, suggest your own recipe"
-                "When giving instructions make sure you number correctly starting from 1,2,3....."
+                "Make sure your response is accurate and do not mix up or make up ingredients or steps"
+                "Make sure your measurements are accurate"
                 
             )
         }
@@ -115,6 +109,7 @@ class ChatService:
                 # Parse the response as RecipeSearchResponse model
                 response_data = response.json()
                 recipe_response = RecipeSearchResponse(**response_data)
+                print(recipe_response)
                 
                 if recipe_response.success:
                     return recipe_response.data
@@ -126,7 +121,7 @@ class ChatService:
         except Exception as e:
             return f"Unexpected error: {str(e)}"
 
-    async def handle_tool_calls(self, tool_calls, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    async def handle_tool_calls(self, tool_calls, conversation_history: List[Dict[str, Any]], search_type) -> List[Dict[str, Any]]:
         """
         Handle tool calls and return updated conversation history
         
@@ -159,7 +154,7 @@ class ChatService:
             if function_name == "call_recipe_api":
                 try:
                     function_args = json.loads(tool_call.function.arguments)
-                    params = RecipeSearchRequest(**function_args)
+                    params = RecipeSearchRequest(**function_args, search_type=search_type)
                     function_response = await self.call_recipe_api(params)
                 except json.JSONDecodeError:
                     function_response = "Invalid arguments provided for recipe search."
@@ -199,7 +194,7 @@ class ChatService:
 
 
     async def process_message(
-        self, message: str, user_id: str, conversation_id: str, search: bool = False
+        self, message: str, user_id: str, conversation_id: str, search: bool = False, search_type: str = ""
     ) -> tuple[str, str]:
         """
         Process a user message and return AI response.
@@ -215,7 +210,7 @@ class ChatService:
         """
 
         def sanitize_messages(messages: list[dict]) -> list[dict]:
-            allowed_keys = {"role", "content", "name"}
+            allowed_keys = {"role", "content", "name", "tool_calls", "tool_call_id"}
             return [{k: v for k, v in msg.items() if k in allowed_keys} for msg in messages]
 
         # Load conversation (must already exist)
@@ -235,6 +230,7 @@ class ChatService:
 
         # Call model
         if search:
+            print("Searching")
             response = self.groq_client.chat.completions.create(
                 model=self.model,
                 messages=sanitized_history,
@@ -254,7 +250,7 @@ class ChatService:
         # Tool call handling
         tool_calls = response_message.tool_calls
         if tool_calls:
-            conversation_history = await self.handle_tool_calls(tool_calls, conversation_history)
+            conversation_history = await self.handle_tool_calls(tool_calls, conversation_history, search_type)
             sanitized_history = sanitize_messages(conversation_history)
             second_response = self.groq_client.chat.completions.create(
                 model=self.model,
