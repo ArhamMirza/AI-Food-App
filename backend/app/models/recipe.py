@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Union, Dict,Any
+from datetime import datetime
+
 
 
 class RecipeSearchRequest(BaseModel):
@@ -11,9 +13,17 @@ class RecipeSearchRequest(BaseModel):
     multiple: bool = Field(False, description="Whether to return multiple recipes")
     search_type: str = Field(None, description="Whether google search or youtube search")
 
+class RecipeResponse(BaseModel):
+    recipe_id: str
+    user_id: str
+    title: str
+    content: dict
+    # created_at: datetime
+    # updated_at: datetime
+    
 class RecipeSearchResponse(BaseModel):
     success: bool
-    data: str
+    data: RecipeResponse
     message: Optional[str] = None
 
 class SavedRecipe(BaseModel):
@@ -21,13 +31,7 @@ class SavedRecipe(BaseModel):
     title: str
     content: str
 
-class RecipeResponse(BaseModel):
-    recipe_id: str
-    user_id: str
-    title: str
-    content: Dict[str, Any]
     
-   
 
 class RecipeListResponse(BaseModel):
     success: bool

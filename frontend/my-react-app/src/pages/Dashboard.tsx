@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { ChefHat, Sparkles, Bot, Utensils, LogOut, Home, Plus, Calendar, Search, Menu, X, MessageSquare, Maximize, Minimize, ChevronLeft, ChevronRight, Send, Loader } from 'lucide-react';
+import { ChefHat, Sparkles, Bot, Utensils, LogOut, Home, Plus, Calendar, Search, Menu, X, Maximize, Minimize, ChevronLeft, ChevronRight, Send, Loader } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../redux/hooks';
 import { logout } from '../redux/slices/userSlice';
 import { fetchSavedRecipes } from '../redux/slices/savedRecipesSlice';
 import SidebarNav from '../components/SideBarNav';
+import { useNavigate } from 'react-router-dom';
 
 interface NavItem {
   icon: JSX.Element;
@@ -45,8 +46,8 @@ const Dashboard: React.FC = () => {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [weekOffset, setWeekOffset] = useState<number>(0);
+  const navigate = useNavigate();
 
-  // API base URL - adjust this to match your FastAPI backend URL
   const API_BASE_URL = 'http://localhost:8000/api/v1';
 
   useEffect(() => {
@@ -61,7 +62,6 @@ const Dashboard: React.FC = () => {
     }
   }, [dispatch, user?.saved_recipes]);
 
-  // Load conversation history when chat opens
   useEffect(() => {
     if (isChatOpen && conversationId) {
       loadConversationHistory();
@@ -132,7 +132,6 @@ const Dashboard: React.FC = () => {
       timestamp: new Date()
     };
 
-    // Add user message to chat immediately
     setMessages(prev => [...prev, userMessageObj]);
     setNewMessage('');
     setIsLoading(true);
@@ -140,12 +139,10 @@ const Dashboard: React.FC = () => {
     try {
       const response = await sendMessageToAPI(userMessage);
       
-      // Update conversation ID if this is the first message
       if (!conversationId && response.conversation_id) {
         setConversationId(response.conversation_id);
       }
 
-      // Add bot response
       const botMessageObj: Message = {
         id: messages.length + 2,
         text: response.response,
@@ -157,7 +154,6 @@ const Dashboard: React.FC = () => {
     } catch (error) {
       console.error('Error sending message:', error);
       
-      // Add error message
       const errorMessageObj: Message = {
         id: messages.length + 2,
         text: 'Sorry, I encountered an error. Please try again later.',
@@ -234,11 +230,11 @@ const Dashboard: React.FC = () => {
   const weekHeader = `Your Meal Plan - ${weekStart.month} ${weekStart.dayNumber} - ${weekEnd.month} ${weekEnd.dayNumber}, ${currentDate.getFullYear()}`;
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-hidden flex">
+    <div className="min-h-screen bg-gradient-to-br from-[#2A1B3D] to-[#1A1A2E] text-white overflow-hidden flex">
       <div className="fixed inset-0 opacity-10 pointer-events-none">
-        <div className="absolute top-20 left-20 w-96 h-96 bg-green-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-80 h-80 bg-green-400 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
-        <div className="absolute bottom-20 left-1/2 w-72 h-72 bg-green-600 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
+        <div className="absolute top-20 left-20 w-96 h-96 bg-[#3A2F5F] rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+        <div className="absolute top-40 right-20 w-80 h-80 bg-[#4A406F] rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
+        <div className="absolute bottom-20 left-1/2 w-72 h-72 bg-[#5A517F] rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
       </div>
 
       <SidebarNav 
@@ -249,63 +245,55 @@ const Dashboard: React.FC = () => {
       />
 
       <div className={`flex-1 flex flex-col transition-all duration-300 ${isCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
-        <header className={`fixed top-0 right-0 z-40 transition-all duration-300 ${isCollapsed ? 'left-0 md:left-16' : 'left-0 md:left-64'} ${scrollY > 50 ? 'bg-black/80 backdrop-blur-sm border-b border-gray-800' : ''}`}>
+        <header className={`fixed top-0 right-0 z-40 transition-all duration-300 ${isCollapsed ? 'left-0 md:left-16' : 'left-0 md:left-64'} ${scrollY > 50 ? 'bg-[#1A1A2E]/80 backdrop-blur-sm border-b border-[#3A2F5F]' : ''}`}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <button
-                className="md:hidden text-gray-300 hover:text-white"
+                className="md:hidden text-gray-300 hover:text-[#4CAF50] p-2"
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               >
                 {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
-              <div className="flex items-center space-x-4 flex-1 justify-end md:justify-between">
-                <div className="relative w-full max-w-md hidden md:block">
-                  <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Search recipes..."
-                    className="w-full pl-10 pr-4 py-2 bg-gray-900/50 border border-gray-800 rounded-lg text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
+              <div className="flex items-center justify-end flex-1 space-x-4">
+                <span className="text-gray-300 hidden sm:block text-sm">
+                  Welcome, {user?.username || 'Guest'}!
+                </span>
+                <div className="w-10 h-10 bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] rounded-full flex items-center justify-center">
+                  <ChefHat className="w-6 h-6 text-white" />
                 </div>
-                <div className="flex items-center space-x-4">
-                  <span className="text-gray-300 hidden sm:block">Welcome, {user?.username || 'Guest'}!</span>
-                  <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
-                    <ChefHat className="w-6 h-6 text-white" />
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="md:hidden px-4 pb-4">
-              <div className="relative w-full">
-                <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search recipes..."
-                  className="w-full pl-10 pr-4 py-2 bg-gray-900/50 border border-gray-800 rounded-lg text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
               </div>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 pt-20 md:pt-24 px-4 md:px-8">
+        <main className="flex-1 pt-20 md:pt-24 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
             <section className="mb-12">
               <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                Welcome to Your <span className="text-green-400">Cooking Hub</span>
+                Welcome to Your <span className="text-[#4CAF50]">Cooking Hub</span>
               </h1>
               <p className="text-xl text-gray-300 max-w-3xl">
-                Explore personalized recipes, plan your meals, and connect with the community to elevate your cooking experience.
+                Explore personalized recipes, plan your meals with our AI cooking assistant to elevate your cooking experience.
               </p>
             </section>
 
             <section className="mb-12">
+              <h2 className="text-2xl font-semibold mb-6">AI Cooking Assistant</h2>
+              <button
+                onClick={() => navigate('/chat')}
+                className="bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] hover:from-[#45a049] hover:to-[#5cb860] text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-[#4CAF50]/25 flex items-center justify-center w-full sm:w-auto"
+              >
+                <Bot className="w-5 h-5 mr-2" /> Chat Now
+              </button>
+            </section>
+
+            <section className="mb-12">
               <h2 className="text-2xl font-semibold mb-6">Quick Actions</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-6">
-                <button className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-4 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-green-500/25 flex items-center justify-center">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <button className="bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] hover:from-[#45a049] hover:to-[#5cb860] text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-[#4CAF50]/25 flex items-center justify-center">
                   <Plus className="w-5 h-5 mr-2" /> New Recipe
                 </button>
-                <button className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 hover:bg-gray-700/50 text-white px-6 py-4 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 flex items-center justify-center">
+                <button className="bg-[#2A1B3D]/50 backdrop-blur-sm border border-[#3A2F5F] hover:bg-[#2A1B3D]/70 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 flex items-center justify-center">
                   <Calendar className="w-5 h-5 mr-2" /> Plan Meal
                 </button>
               </div>
@@ -320,10 +308,10 @@ const Dashboard: React.FC = () => {
                     return (
                       <div
                         key={recipeId}
-                        className="bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-2xl p-6 hover:bg-gray-800/50 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-green-500/10"
+                        className="bg-[#2A1B3D]/50 backdrop-blur-sm border border-[#3A2F5F] rounded-2xl p-6 hover:bg-[#2A1B3D]/70 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-[#4CAF50]/10"
                       >
                         <h3 className="text-xl font-semibold mb-2">{recipe?.title || 'Loading...'}</h3>
-                        <p className="text-gray-400">{recipe?.ingredients?.length ? 'Recipe' : 'No details'}</p>
+                        <p className="text-gray-400 text-sm">{recipe?.ingredients?.length ? 'Recipe' : 'No details'}</p>
                       </div>
                     );
                   })
@@ -333,13 +321,13 @@ const Dashboard: React.FC = () => {
               </div>
             </section>
 
-            <section>
+            <section className="mb-12">
               <div className="flex items-center justify-between mb-6 relative z-10">
                 <h2 className="text-2xl font-semibold">{weekHeader}</h2>
                 <div className="flex space-x-2">
                   <button
                     type="button"
-                    className="p-2 bg-gray-800/50 rounded-full hover:bg-gray-700/50 text-gray-300 hover:text-green-400 transition-all duration-200 cursor-pointer pointer-events-auto z-30"
+                    className="p-2 bg-[#2A1B3D]/50 rounded-full hover:bg-[#3A2F5F] text-gray-300 hover:text-[#4CAF50] transition-all duration-200 cursor-pointer pointer-events-auto z-30"
                     onClick={() => navigateWeek('prev')}
                     aria-label="Previous week"
                   >
@@ -347,7 +335,7 @@ const Dashboard: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    className="p-2 bg-gray-800/50 rounded-full hover:bg-gray-700/50 text-gray-300 hover:text-green-400 transition-all duration-200 cursor-pointer pointer-events-auto z-30"
+                    className="p-2 bg-[#2A1B3D]/50 rounded-full hover:bg-[#3A2F5F] text-gray-300 hover:text-[#4CAF50] transition-all duration-200 cursor-pointer pointer-events-auto z-30"
                     onClick={() => navigateWeek('next')}
                     aria-label="Next week"
                   >
@@ -355,7 +343,7 @@ const Dashboard: React.FC = () => {
                   </button>
                 </div>
               </div>
-              <div className="bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-2xl p-6">
+              <div className="bg-[#2A1B3D]/50 backdrop-blur-sm border border-[#3A2F5F] rounded-2xl p-6">
                 <div className="grid grid-cols-1 sm:grid-cols-7 gap-4">
                   {calendarDays.map((day) => {
                     const meal = mealPlans[day.dateStr];
@@ -367,8 +355,8 @@ const Dashboard: React.FC = () => {
                         <div
                           className={`p-4 rounded-lg ${
                             day.isCurrentDay
-                              ? 'bg-green-600/50 border border-green-500'
-                              : 'bg-gray-800/50 hover:bg-gray-700/50'
+                              ? 'bg-[#4CAF50]/50 border border-[#66BB6A]'
+                              : 'bg-[#2A1B3D]/70 hover:bg-[#3A2F5F]/50'
                           } transition-all duration-200 min-h-[120px] flex flex-col justify-between text-center`}
                         >
                           <div className="text-gray-300 font-semibold">
@@ -376,9 +364,9 @@ const Dashboard: React.FC = () => {
                           </div>
                           <p className="text-gray-400 text-sm mb-2">{meal?.meal || 'No meal planned'}</p>
                           {meal ? (
-                            <button className="text-green-400 hover:text-green-300 text-sm">View Recipe</button>
+                            <button className="text-[#4CAF50] hover:text-[#66BB6A] text-sm">View Recipe</button>
                           ) : (
-                            <button className="text-green-400 hover:text-green-300 text-sm">Add Meal</button>
+                            <button className="text-[#4CAF50] hover:text-[#66BB6A] text-sm">Add Meal</button>
                           )}
                         </div>
                       </div>
@@ -390,120 +378,19 @@ const Dashboard: React.FC = () => {
           </div>
         </main>
 
-        <button
-          className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-full flex items-center justify-center shadow-lg hover:shadow-green-500/25 transition-all duration-200 z-50"
-          onClick={() => setIsChatOpen(!isChatOpen)}
-        >
-          <MessageSquare className="w-6 h-6 text-white" />
-        </button>
-
-        {isChatOpen && (
-          <div
-            className={`fixed bottom-20 right-6 ${
-              isChatExpanded ? 'w-full md:w-[600px] max-h-[90vh]' : 'w-80 md:w-96 max-h-[70vh]'
-            } bg-gray-900/95 backdrop-blur-sm border border-gray-800 rounded-2xl shadow-2xl shadow-green-500/10 z-50 flex flex-col transition-all duration-300`}
-          >
-            <div className="p-4 border-b border-gray-800 flex justify-between items-center">
-              <div className="flex items-center space-x-2">
-                <Bot className="w-6 h-6 text-green-400" />
-                <span className="font-semibold text-green-400">Cooking Assistant</span>
-                {conversationId && (
-                  <span className="text-xs text-gray-500">#{conversationId.slice(-8)}</span>
-                )}
-              </div>
-              <div className="flex items-center space-x-2">
-                <button
-                  className="text-gray-300 hover:text-red-400 text-xs px-2 py-1 rounded"
-                  onClick={clearConversation}
-                  title="Clear conversation"
-                >
-                  Clear
-                </button>
-                <button
-                  className="text-gray-300 hover:text-white"
-                  onClick={() => setIsChatExpanded(!isChatExpanded)}
-                >
-                  {isChatExpanded ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
-                </button>
-                <button
-                  className="text-gray-300 hover:text-white"
-                  onClick={() => setIsChatOpen(false)}
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-            <div className="flex-1 p-4 overflow-y-auto">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`mb-3 flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[70%] p-3 rounded-lg ${
-                      message.isUser
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-800/50 text-gray-300'
-                    }`}
-                  >
-                    <div className="whitespace-pre-wrap">{message.text}</div>
-                    {message.timestamp && (
-                      <div className="text-xs opacity-70 mt-1">
-                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-              {isLoading && (
-                <div className="mb-3 flex justify-start">
-                  <div className="bg-gray-800/50 text-gray-300 p-3 rounded-lg flex items-center space-x-2">
-                    <Loader className="w-4 h-4 animate-spin" />
-                    <span>Thinking...</span>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="p-4 border-t border-gray-800">
-              <div className="flex space-x-2">
-                <textarea
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Ask about recipes, cooking tips, meal planning..."
-                  className="flex-1 p-2 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
-                  rows={1}
-                  onKeyPress={handleKeyPress}
-                  disabled={isLoading}
-                />
-                <button
-                  className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={handleSendMessage}
-                  disabled={isLoading || !newMessage.trim()}
-                >
-                  {isLoading ? (
-                    <Loader className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <footer className={`border-t border-gray-800 py-8 px-4 transition-all duration-300 ${isCollapsed ? 'md:pl-20' : 'md:pl-8'}`}>
+        <footer className={`border-t border-[#3A2F5F] py-8 px-4 sm:px-6 lg:px-8 ${isCollapsed ? 'md:pl-20' : 'md:pl-68'}`}>
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
               <div className="relative">
-                <ChefHat className="w-8 h-8 text-green-400" />
-                <Sparkles className="w-4 h-4 text-green-400 absolute -top-1 -right-1 animate-pulse" />
+                <ChefHat className="w-8 h-8 text-[#4CAF50]" />
+                <Sparkles className="w-4 h-4 text-[#4CAF50] absolute -top-1 -right-1 animate-pulse" />
               </div>
               <span className="text-xl font-bold">Food AI Assistant</span>
             </div>
             <div className="flex space-x-8 text-gray-400">
-              <a href="#" className="hover:text-green-400 transition-colors">Privacy</a>
-              <a href="#" className="hover:text-green-400 transition-colors">Terms</a>
-              <a href="#" className="hover:text-green-400 transition-colors">Support</a>
+              <a href="#" className="hover:text-[#4CAF50] transition-colors">Privacy</a>
+              <a href="#" className="hover:text-[#4CAF50] transition-colors">Terms</a>
+              <a href="#" className="hover:text-[#4CAF50] transition-colors">Support</a>
             </div>
           </div>
         </footer>
