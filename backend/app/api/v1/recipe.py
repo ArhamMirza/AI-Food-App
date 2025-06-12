@@ -15,6 +15,8 @@ def document_to_recipe_response(doc: Dict[str, Any]) -> RecipeResponse:
         user_id=str(doc["user_id"]),
         title=doc["title"],
         content=doc["content"],
+        # created_at=doc.get("created_at"),
+        # updated_at=doc.get("updated_at")
     )
 
 @router.post("/search", response_model=RecipeSearchResponse)
@@ -58,7 +60,7 @@ async def search_recipes(request: RecipeSearchRequest):
             detail=f"Internal server error: {str(e)}"
         )
 
-@router.get("/{user_id}", response_model=RecipeListResponse)
+@router.get("/user/{user_id}", response_model=RecipeListResponse)
 async def get_recipes_by_user(user_id: str):
     """
     Get all recipes for a given user.
@@ -76,6 +78,38 @@ async def get_recipes_by_user(user_id: str):
             data=[document_to_recipe_response(doc) for doc in recipes],
             message="Recipes retrieved successfully"
         )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
+@router.get("/{recipe_id}", response_model=RecipeSearchResponse)
+async def get_recipe_by_id(recipe_id: str):
+    """
+    Get a specific recipe by its ID.
+
+    Args:
+        recipe_id: ID of the recipe
+
+    Returns:
+        Single recipe details
+    """
+    try:
+    
+        recipe = await RecipeSchema.find_by_id(recipe_id)
+        print(document_to_recipe_response(recipe))
+        if not recipe:
+            raise HTTPException(
+                status_code=404,
+                detail="Recipe not found"
+            )
+        return RecipeSearchResponse(
+            success=True,
+            data=document_to_recipe_response(recipe),
+            message="Recipe retrieved successfully"
+        )
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(
             status_code=500,

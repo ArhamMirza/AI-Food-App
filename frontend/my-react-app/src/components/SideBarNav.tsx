@@ -63,7 +63,7 @@ const SidebarNav: React.FC<SidebarNavProps> = ({
         className={`
           fixed inset-0 md:inset-y-0 md:left-0 z-50
           ${isCollapsed ? 'w-full md:w-16' : 'w-full md:w-64'}
-          bg-black/95 backdrop-blur-sm border-r border-gray-800
+          bg-[#1A1A2E]/95 backdrop-blur-sm border-r border-[#3A2F5F]
           transform transition-all duration-300 ease-in-out
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
@@ -78,15 +78,15 @@ const SidebarNav: React.FC<SidebarNavProps> = ({
               `}
             >
               <div className="relative">
-                <ChefHat className="w-8 h-8 text-green-400 flex-shrink-0" />
-                <Sparkles className="w-4 h-4 text-green-300 absolute -top-1 -right-1 animate-pulse" />
+                <ChefHat className="w-8 h-8 text-[#4CAF50] flex-shrink-0" />
+                <Sparkles className="w-4 h-4 text-[#66BB6A] absolute -top-1 -right-1 animate-pulse" />
               </div>
               <span className="text-xl font-bold text-white whitespace-nowrap">Food AI</span>
             </div>
 
             {/* Collapse/Expand Buttons */}
             <button
-              className="hidden md:flex p-2 bg-gray-800/50 rounded-full hover:bg-gray-700/50 text-gray-300 hover:text-green-400 transition"
+              className="hidden md:flex p-2 bg-[#2A1B3D]/50 rounded-full hover:bg-[#3A2F5F] text-gray-300 hover:text-[#4CAF50] transition"
               onClick={() => setIsCollapsed(!isCollapsed)}
               aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
@@ -94,7 +94,7 @@ const SidebarNav: React.FC<SidebarNavProps> = ({
             </button>
 
             <button
-              className="md:hidden p-2 bg-gray-800/50 rounded-full hover:bg-gray-700/50 text-gray-300 hover:text-green-400 transition"
+              className="md:hidden p-2 bg-[#2A1B3D]/50 rounded-full hover:bg-[#3A2F5F] text-gray-300 hover:text-[#4CAF50] transition"
               onClick={() => setIsSidebarOpen(false)}
               aria-label="Close sidebar"
             >
@@ -110,7 +110,7 @@ const SidebarNav: React.FC<SidebarNavProps> = ({
                 href={item.href}
                 className={`
                   flex items-center p-3 rounded-lg 
-                  hover:bg-gray-800/50 text-gray-300 hover:text-green-400 
+                  hover:bg-[#2A1B3D]/50 text-gray-300 hover:text-[#4CAF50] 
                   transition duration-200
                   ${isCollapsed && !isMobile ? 'justify-center' : 'space-x-3'}
                 `}
@@ -135,7 +135,7 @@ const SidebarNav: React.FC<SidebarNavProps> = ({
           <button
             className={`
               flex items-center p-3 rounded-lg 
-              hover:bg-gray-800/50 text-gray-300 hover:text-green-400 
+              hover:bg-[#2A1B3D]/50 text-gray-300 hover:text-[#4CAF50] 
               transition duration-200 w-full text-left
               ${isCollapsed && !isMobile ? 'justify-center' : 'space-x-3'}
             `}

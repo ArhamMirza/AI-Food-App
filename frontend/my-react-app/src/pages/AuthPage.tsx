@@ -146,34 +146,34 @@ const AuthPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-green-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-72 h-72 bg-green-400 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-80 w-72 h-72 bg-green-600 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
+    <div className="min-h-screen bg-gradient-to-br from-[#2A1B3D] to-[#1A1A2E] flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute inset-0 opacity-10 pointer-events-none">
+        <div className="absolute top-20 left-20 w-72 h-72 bg-[#3A2F5F] rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+        <div className="absolute top-40 right-20 w-72 h-72 bg-[#4A406F] rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-80 w-72 h-72 bg-[#5A517F] rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
       </div>
 
       {showEmailVerificationPopup && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-8 max-w-md w-full relative animate-in fade-in zoom-in duration-300">
+          <div className="bg-[#2A1B3D]/50 backdrop-blur-sm border border-[#3A2F5F] rounded-2xl p-8 max-w-md w-full relative animate-in fade-in zoom-in duration-300">
             <button
               onClick={closeEmailVerificationPopup}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+              className="absolute top-4 right-4 text-gray-400 hover:text-[#4CAF50] transition-colors"
             >
               <X className="w-6 h-6" />
             </button>
             <div className="flex justify-center mb-6">
-              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-8 h-8 text-green-400" />
+              <div className="w-16 h-16 bg-[#4CAF50]/20 rounded-full flex items-center justify-center">
+                <CheckCircle className="w-8 h-8 text-[#4CAF50]" />
               </div>
             </div>
             <div className="text-center">
               <h3 className="text-2xl font-bold text-white mb-4">Check Your Email</h3>
               <p className="text-gray-300 mb-6 leading-relaxed">
-                We've sent a verification link to <span className="text-green-400 font-medium">{formData.email}</span>.
+                We've sent a verification link to <span className="text-[#4CAF50] font-medium">{formData.email}</span>.
                 Please check your email and click the verification link to activate your account.
               </p>
-              <div className="bg-gray-800/50 rounded-lg p-4 mb-6">
+              <div className="bg-[#2A1B3D]/70 rounded-lg p-4 mb-6">
                 <p className="text-gray-400 text-sm">
                   <strong className="text-gray-300">Didn't receive the email?</strong><br />
                   Check your spam folder or contact support if you need help.
@@ -181,7 +181,7 @@ const AuthPage: React.FC = () => {
               </div>
               <button
                 onClick={closeEmailVerificationPopup}
-                className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] shadow-lg hover:shadow-green-500/25"
+                className="w-full bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] hover:from-[#45a049] hover:to-[#5cb860] text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] shadow-lg hover:shadow-[#4CAF50]/25"
               >
                 Got it, thanks!
               </button>
@@ -191,17 +191,17 @@ const AuthPage: React.FC = () => {
       )}
 
       <div className="relative z-10 w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
+        <div className="text-center mb-12">
+          <div className="flex items-center justify-center mb-6">
             <div className="relative">
-              <ChefHat className="w-12 h-12 text-green-400" />
-              <Sparkles className="w-6 h-6 text-green-300 absolute -top-1 -right-1 animate-pulse" />
+              <ChefHat className="w-12 h-12 text-[#4CAF50]" />
+              <Sparkles className="w-6 h-6 text-[#66BB6A] absolute -top-1 -right-1 animate-pulse" />
             </div>
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">Food AI Assistant</h1>
         </div>
 
-        <div className="bg-gray-900/80 backdrop-blur-sm border border-gray-800 rounded-2xl p-8 shadow-2xl">
+        <div className="bg-[#1A1A2E] backdrop-blur-md border border-[#3A2F5F] rounded-2xl p-8 shadow-2xl transform translate-y-[-20px] bg-opacity-90">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-white">{isLogin ? 'Sign In' : 'Create Account'}</h2>
             <p className="text-gray-400 mt-2">
@@ -220,8 +220,8 @@ const AuthPage: React.FC = () => {
                     name="username"
                     value={formData.username || ''}
                     onChange={handleInputChange}
-                    className={`w-full pl-10 pr-4 py-3 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 ${
-                      errors.username ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-green-500 focus:border-green-500'
+                    className={`w-full pl-10 pr-4 py-3 bg-[#2A1B3D]/50 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                      errors.username ? 'border-red-500 focus:ring-red-500' : 'border-[#3A2F5F] focus:ring-[#4CAF50] focus:border-[#4CAF50]'
                     }`}
                     placeholder="Enter your username"
                   />
@@ -239,8 +239,8 @@ const AuthPage: React.FC = () => {
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className={`w-full pl-10 pr-4 py-3 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 ${
-                    errors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-green-500 focus:border-green-500'
+                  className={`w-full pl-10 pr-4 py-3 bg-[#2A1B3D]/50 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                    errors.email ? 'border-red-500 focus:ring-red-500' : 'border-[#3A2F5F] focus:ring-[#4CAF50] focus:border-[#4CAF50]'
                     }`}
                     placeholder="Enter your email"
                 />
@@ -257,15 +257,15 @@ const AuthPage: React.FC = () => {
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className={`w-full pl-10 pr-12 py-3 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 ${
-                    errors.password ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-green-500 focus:border-green-500'
+                    className={`w-full pl-10 pr-12 py-3 bg-[#2A1B3D]/50 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                    errors.password ? 'border-red-500 focus:ring-red-500' : 'border-[#3A2F5F] focus:ring-[#4CAF50] focus:border-[#4CAF50]'
                     }`}
                     placeholder="Enter your password"
                 />
                 <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-gray-400 hover:text-white transition-colors"
+                    className="absolute right-3 top-3 text-gray-400 hover:text-[#4CAF50] transition-colors"
                 >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -283,15 +283,15 @@ const AuthPage: React.FC = () => {
                     name="confirmPassword"
                     value={formData.confirmPassword || ''}
                     onChange={handleInputChange}
-                    className={`w-full pl-10 pr-12 py-3 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 ${
-                        errors.confirmPassword ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-green-500 focus:border-green-500'
+                    className={`w-full pl-10 pr-12 py-3 bg-[#2A1B3D]/50 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 ${
+                        errors.confirmPassword ? 'border-red-500 focus:ring-red-500' : 'border-[#3A2F5F] focus:ring-[#4CAF50] focus:border-[#4CAF50]'
                     }`}
                     placeholder="Confirm your password"
                     />
                     <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-3 text-gray-400 hover:text-white transition-colors"
+                    className="absolute right-3 top-3 text-gray-400 hover:text-[#4CAF50] transition-colors"
                     >
                     {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -309,7 +309,7 @@ const AuthPage: React.FC = () => {
             <button
                 onClick={handleSubmit}
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg hover:shadow-green-500/25"
+                className="w-full bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] hover:from-[#45a049] hover:to-[#5cb860] text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg hover:shadow-[#4CAF50]/25"
             >
                 {isLoading ? (
                 <div className="flex items-center justify-center">
@@ -323,10 +323,10 @@ const AuthPage: React.FC = () => {
 
             <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-700"></div>
+                <div className="w-full border-t border-[#3A2F5F]"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-gray-900 text-gray-400">Or continue with</span>
+                <span className="px-2 bg-[#1A1A2E] text-gray-400">Or continue with</span>
                 </div>
             </div>
 
@@ -351,7 +351,7 @@ const AuthPage: React.FC = () => {
                 {isLogin ? "Don't have an account? " : "Already have an account? "}
                 <button
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-green-400 hover:text-green-300 font-medium transition-colors"
+                className="text-[#4CAF50] hover:text-[#66BB6A] font-medium transition-colors"
                 >
                 {isLogin ? "Sign up here" : "Sign in here"}
                 </button>
@@ -360,7 +360,7 @@ const AuthPage: React.FC = () => {
 
             {isLogin && (
             <div className="mt-4 text-center">
-                <a href="#" className="text-green-400 hover:text-green-300 text-sm transition-colors">
+                <a href="#" className="text-[#4CAF50] hover:text-[#66BB6A] text-sm transition-colors">
                 Forgot your password?
                 </a>
             </div>
@@ -369,17 +369,17 @@ const AuthPage: React.FC = () => {
 
         <p className="text-center text-gray-500 text-xs mt-6">
             By {isLogin ? 'signing in' : 'creating an account'}, you agree to our{' '}
-            <a href="#" className="text-green-400 hover:text-green-300 transition-colors">
+            <a href="#" className="text-[#4CAF50] hover:text-[#66BB6A] transition-colors">
             Terms of Service
             </a>{' '}
             and{' '}
-            <a href="#" className="text-green-400 hover:text-green-300 transition-colors">
+            <a href="#" className="text-[#4CAF50] hover:text-[#66BB6A] transition-colors">
             Privacy Policy
             </a>
         </p>
         </div>
     </div>
-    );
+  );
 };
 
 export default AuthPage;
