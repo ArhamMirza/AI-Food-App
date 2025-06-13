@@ -1,402 +1,720 @@
-import React, { useState, useEffect } from 'react';
-import { ChefHat, Sparkles, Bot, Utensils, LogOut, Home, Plus, Calendar, Search, Menu, X, Maximize, Minimize, ChevronLeft, ChevronRight, Send, Loader } from 'lucide-react';
-import { useAppSelector, useAppDispatch } from '../redux/hooks';
-import { logout } from '../redux/slices/userSlice';
-import { fetchSavedRecipes } from '../redux/slices/savedRecipesSlice';
-import SidebarNav from '../components/SideBarNav';
-import { useNavigate } from 'react-router-dom';
+"use client"
+
+import type React from "react"
+import { useState, useEffect, useRef } from "react"
+import {
+  ChefHat,
+  Sparkles,
+  Bot,
+  Utensils,
+  LogOut,
+  Home,
+  Calendar,
+  Menu,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  MessageSquare,
+  Plus,
+  Search,
+} from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 interface NavItem {
-  icon: JSX.Element;
-  label: string;
-  href: string;
+  icon: React.ReactNode
+  label: string
+  href: string
 }
 
-interface Message {
-  id: number;
-  text: string;
-  isUser: boolean;
-  timestamp?: Date;
+interface Recipe {
+  recipe_id: string
+  title: string
+  content?: string
 }
 
-interface ChatResponse {
-  response: string;
-  conversation_id: string;
+interface MealPlan {
+  meal: string
+  recipe_id?: string
+  custom: boolean
 }
 
-interface ChatRequest {
-  message: string;
+interface MealPlans {
+  [date: string]: MealPlan
+}
+
+interface MealPlanModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onSave: (recipe: string | Recipe, isCustom: boolean) => void
+  recipes: Recipe[]
+  date: string
 }
 
 const Dashboard: React.FC = () => {
-  const dispatch = useAppDispatch();
-  const user = useAppSelector(state => state.user.user);
-  const savedRecipes = useAppSelector(state => state.savedRecipes.recipes);
-  const recipeDetails = useAppSelector(state => state.savedRecipes.recipeDetails);
-  const mealPlans = useAppSelector(state => state.mealPlans.plans);
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
-  const [scrollY, setScrollY] = useState<number>(0);
-  const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
-  const [isChatExpanded, setIsChatExpanded] = useState<boolean>(false);
-  const [messages, setMessages] = useState<Message[]>([
-    { id: 1, text: 'Hello! How can I assist you with your cooking today?', isUser: false, timestamp: new Date() },
-  ]);
-  const [newMessage, setNewMessage] = useState<string>('');
-  const [conversationId, setConversationId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [weekOffset, setWeekOffset] = useState<number>(0);
-  const navigate = useNavigate();
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false)
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false)
+  const [scrollY, setScrollY] = useState<number>(0)
+  const [weekOffset, setWeekOffset] = useState<number>(0)
+  const [recipes, setRecipes] = useState<Recipe[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
+  const [mealPlans, setMealPlans] = useState<MealPlans>({})
+  const [showMealPlanModal, setShowMealPlanModal] = useState<boolean>(false)
+  const [selectedDate, setSelectedDate] = useState<string>("")
+  const navigate = useNavigate()
 
-  const API_BASE_URL = 'http://localhost:8000/api/v1';
+  const API_BASE_URL = "http://localhost:8000/api/v1"
+  const RECIPE_URL = `${API_BASE_URL}/recipe`
+  const USER_ID = "683ac8b1dcd4216109341d9f" // This would normally come from auth context
 
-  useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  useEffect(() => {
-    if (user?.saved_recipes?.length) {
-      dispatch(fetchSavedRecipes(user.saved_recipes));
-    }
-  }, [dispatch, user?.saved_recipes]);
+  // In the fetchUserRecipes function, add a state for user data
+  const [userData, setUserData] = useState<{
+    username: string
+    hasRecipes: boolean
+    hasChats: boolean
+  }>({
+    username: "User",
+    hasRecipes: false,
+    hasChats: false,
+  })
 
   useEffect(() => {
-    if (isChatOpen && conversationId) {
-      loadConversationHistory();
-    }
-  }, [isChatOpen, conversationId]);
+    const handleScroll = () => setScrollY(window.scrollY)
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('access_token');
-    return {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` })
-    };
-  };
+  // Update the useEffect to call both functions
+  useEffect(() => {
+    fetchUserRecipes()
+    fetchUserChatData()
+    fetchMealPlans()
+  }, [])
 
-  const loadConversationHistory = async () => {
-    if (!conversationId) return;
-
+  // Update the fetchUserRecipes function to also set user data
+  const fetchUserRecipes = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/chatbot/conversations/${conversationId}`, {
-        headers: getAuthHeaders()
-      });
+      setLoading(true)
+      const response = await fetch(`${RECIPE_URL}/user/${USER_ID}`)
+      if (!response.ok) throw new Error(`API call failed: ${response.status}`)
+      const data = await response.json()
+      const fetchedRecipes = Array.isArray(data.data) ? data.data : []
+      setRecipes(fetchedRecipes)
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.messages && data.messages.length > 0) {
-          const formattedMessages: Message[] = data.messages.map((msg: any, index: number) => ({
-            id: index + 1,
-            text: msg.content || msg.message,
-            isUser: msg.role === 'user',
-            timestamp: new Date(msg.timestamp || Date.now())
-          }));
-          setMessages(formattedMessages);
-        }
-      }
+      // Update user data based on recipes
+      setUserData((prev) => ({
+        ...prev,
+        hasRecipes: fetchedRecipes.length > 0,
+        username: data.username || "Chef", // Assuming the API returns username
+      }))
     } catch (error) {
-      console.error('Error loading conversation history:', error);
-    }
-  };
-
-  const sendMessageToAPI = async (message: string): Promise<ChatResponse> => {
-    const requestBody: ChatRequest = { message };
-    const url = conversationId 
-      ? `${API_BASE_URL}/chatbot/chat?conversation_id=${conversationId}`
-      : `${API_BASE_URL}/chatbot/chat`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(requestBody)
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
-  };
-
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || isLoading) return;
-
-    const userMessage = newMessage.trim();
-    const userMessageObj: Message = {
-      id: messages.length + 1,
-      text: userMessage,
-      isUser: true,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessageObj]);
-    setNewMessage('');
-    setIsLoading(true);
-
-    try {
-      const response = await sendMessageToAPI(userMessage);
-      
-      if (!conversationId && response.conversation_id) {
-        setConversationId(response.conversation_id);
-      }
-
-      const botMessageObj: Message = {
-        id: messages.length + 2,
-        text: response.response,
-        isUser: false,
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, botMessageObj]);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      
-      const errorMessageObj: Message = {
-        id: messages.length + 2,
-        text: 'Sorry, I encountered an error. Please try again later.',
-        isUser: false,
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, errorMessageObj]);
+      console.error("Failed to load recipes:", error)
     } finally {
-      setIsLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
+  // Add a function to fetch user chat data
+  const fetchUserChatData = async () => {
+    try {
+      // This would be replaced with an actual API call
+      // For now, we'll simulate it
+      const hasChats = Math.random() > 0.5 // Randomly determine if user has chats
 
-  const clearConversation = async () => {
-    if (conversationId) {
-      try {
-        await fetch(`${API_BASE_URL}/chatbot/conversations/${conversationId}`, {
-          method: 'DELETE',
-          headers: getAuthHeaders()
-        });
-      } catch (error) {
-        console.error('Error deleting conversation:', error);
-      }
+      setUserData((prev) => ({
+        ...prev,
+        hasChats,
+      }))
+    } catch (error) {
+      console.error("Failed to load chat data:", error)
     }
-    
-    setMessages([
-      { id: 1, text: 'Hello! How can I assist you with your cooking today?', isUser: false, timestamp: new Date() }
-    ]);
-    setConversationId(null);
-  };
+  }
+
+  const fetchMealPlans = async () => {
+    try {
+      // This would be replaced with an actual API call to get meal plans
+      // For now, we'll start with an empty object as requested
+      setMealPlans({})
+    } catch (error) {
+      console.error("Failed to load meal plans:", error)
+    }
+  }
 
   const handleLogout = () => {
-    dispatch(logout());
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-  };
+    localStorage.removeItem("access_token")
+    localStorage.removeItem("refresh_token")
+    navigate("/login")
+  }
 
-  const navigateWeek = (direction: 'prev' | 'next') => {
-    setWeekOffset(prev => direction === 'next' ? prev + 1 : prev - 1);
-  };
+  const navigateWeek = (direction: "prev" | "next") => {
+    setWeekOffset((prev) => (direction === "next" ? prev + 1 : prev - 1))
+  }
+
+  const handleAddMeal = (date: string) => {
+    setSelectedDate(date)
+    setShowMealPlanModal(true)
+  }
+
+  const handleSaveMeal = async (recipeData: string | Recipe, isCustom: boolean) => {
+    try {
+      // In a real app, this would be an API call to save the meal plan
+      const newMealPlan: MealPlan = isCustom
+        ? {
+            meal: recipeData as string,
+            custom: true,
+          }
+        : {
+            meal: (recipeData as Recipe).title,
+            recipe_id: (recipeData as Recipe).recipe_id,
+            custom: false,
+          }
+
+      // Update the meal plans state
+      setMealPlans((prev) => ({
+        ...prev,
+        [selectedDate]: newMealPlan,
+      }))
+
+      // Close the modal
+      setShowMealPlanModal(false)
+    } catch (error) {
+      console.error("Failed to save meal plan:", error)
+    }
+  }
+
+  const handleViewRecipe = (date: string) => {
+    const mealPlan = mealPlans[date]
+    if (!mealPlan) return
+
+    if (mealPlan.custom) {
+      // For custom meals, we could show a modal with the meal details
+      alert(`Custom meal: ${mealPlan.meal}`)
+    } else if (mealPlan.recipe_id) {
+      // For recipes, navigate to the recipe page
+      navigate(`/recipes/${mealPlan.recipe_id}`)
+    }
+  }
 
   const navItems: NavItem[] = [
-    { icon: <Home className="w-6 h-6" />, label: 'Dashboard', href: '/dashboard' },
-    { icon: <Bot className="w-6 h-6" />, label: 'Recipes', href: '/recipes' },
-    { icon: <Calendar className="w-6 h-6" />, label: 'Meal Plans', href: '/meal-plans' },
-    { icon: <Utensils className="w-6 h-6" />, label: 'Community', href: '/community' },
-    { icon: <LogOut className="w-6 h-6" />, label: 'Logout', href: '#logout' },
-  ];
+    { icon: <Home className="w-6 h-6" />, label: "Dashboard", href: "/dashboard" },
+    { icon: <Bot className="w-6 h-6" />, label: "Recipes", href: "/recipes" },
+    { icon: <Calendar className="w-6 h-6" />, label: "Meal Plans", href: "/meal-plans" },
+    { icon: <Utensils className="w-6 h-6" />, label: "Community", href: "/community" },
+    { icon: <LogOut className="w-6 h-6" />, label: "Logout", href: "#logout" },
+  ]
 
-  const currentDate = new Date();
-  const startDate = new Date(currentDate);
-  startDate.setDate(currentDate.getDate() + weekOffset * 7);
+  const currentDate = new Date()
+  const startDate = new Date(currentDate)
+  startDate.setDate(currentDate.getDate() + weekOffset * 7)
   const calendarDays = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date(startDate);
-    date.setDate(startDate.getDate() + i);
+    const date = new Date(startDate)
+    date.setDate(startDate.getDate() + i)
     return {
-      dateStr: date.toISOString().split('T')[0],
-      dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
+      dateStr: date.toISOString().split("T")[0],
+      dayName: date.toLocaleDateString("en-US", { weekday: "short" }),
       dayNumber: date.getDate(),
-      month: date.toLocaleDateString('en-US', { month: 'short' }),
+      month: date.toLocaleDateString("en-US", { month: "short" }),
       isCurrentDay: date.toDateString() === currentDate.toDateString(),
-    };
-  });
+    }
+  })
 
-  const weekStart = calendarDays[0];
-  const weekEnd = calendarDays[6];
-  const weekHeader = `Your Meal Plan - ${weekStart.month} ${weekStart.dayNumber} - ${weekEnd.month} ${weekEnd.dayNumber}, ${currentDate.getFullYear()}`;
+  const weekStart = calendarDays[0]
+  const weekEnd = calendarDays[6]
+  const weekHeader = `Your Meal Plan - ${weekStart.month} ${weekStart.dayNumber} - ${weekEnd.month} ${weekEnd.dayNumber}, ${currentDate.getFullYear()}`
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#2A1B3D] to-[#1A1A2E] text-white overflow-hidden flex">
-      <div className="fixed inset-0 opacity-10 pointer-events-none">
-        <div className="absolute top-20 left-20 w-96 h-96 bg-[#3A2F5F] rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-80 h-80 bg-[#4A406F] rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
-        <div className="absolute bottom-20 left-1/2 w-72 h-72 bg-[#5A517F] rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-hidden flex">
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #10b981 0%, #059669 100%); border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #34d399 0%, #10b981 100%); }
+        .custom-scrollbar { scrollbar-width: thin; scrollbar-color: #10b981 transparent; }
+      `}</style>
 
-      <SidebarNav 
-        isSidebarOpen={isSidebarOpen} 
-        setIsSidebarOpen={setIsSidebarOpen}
-        isCollapsed={isCollapsed}
-        setIsCollapsed={setIsCollapsed}
-      />
-
-      <div className={`flex-1 flex flex-col transition-all duration-300 ${isCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
-        <header className={`fixed top-0 right-0 z-40 transition-all duration-300 ${isCollapsed ? 'left-0 md:left-16' : 'left-0 md:left-64'} ${scrollY > 50 ? 'bg-[#1A1A2E]/80 backdrop-blur-sm border-b border-[#3A2F5F]' : ''}`}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
+      {/* Sidebar */}
+      <aside
+        className={`
+          fixed lg:static inset-y-0 left-0 z-50 
+          ${isCollapsed ? "w-16" : "w-80 lg:w-72 xl:w-80"}
+          transform ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0
+          transition-all duration-300 ease-in-out
+          bg-gradient-to-b from-slate-800 to-slate-900 
+          border-r border-slate-700/50 backdrop-blur-xl
+          flex flex-col shadow-2xl
+        `}
+      >
+        {/* Header */}
+        <div className="flex justify-between items-center p-4 border-b border-slate-700/50">
+          {!isCollapsed ? (
+            <>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-r from-green-400 to-emerald-500 rounded-lg flex items-center justify-center">
+                  <ChefHat size={18} className="text-white" />
+                </div>
+                <span className="text-white font-bold text-lg">Food AI</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsCollapsed(true)}
+                  className="hidden lg:block text-gray-400 hover:text-white transition-colors p-1"
+                  title="Collapse sidebar"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <button
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="lg:hidden text-gray-400 hover:text-white transition-colors p-1"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-4 w-full">
               <button
-                className="md:hidden text-gray-300 hover:text-[#4CAF50] p-2"
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                onClick={() => setIsCollapsed(false)}
+                className="text-gray-400 hover:text-white transition-colors p-1"
+                title="Expand sidebar"
               >
-                {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                <ChevronRight size={20} />
               </button>
-              <div className="flex items-center justify-end flex-1 space-x-4">
-                <span className="text-gray-300 hidden sm:block text-sm">
-                  Welcome, {user?.username || 'Guest'}!
-                </span>
-                <div className="w-10 h-10 bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] rounded-full flex items-center justify-center">
-                  <ChefHat className="w-6 h-6 text-white" />
+              <div className="w-8 h-8 bg-gradient-to-r from-green-400 to-emerald-500 rounded-lg flex items-center justify-center">
+                <ChefHat size={18} className="text-white" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 p-4 overflow-y-auto custom-scrollbar">
+          <div className="space-y-2">
+            {!isCollapsed ? (
+              navItems.map((item, index) => (
+                <a
+                  key={index}
+                  href={item.href}
+                  onClick={(e) => {
+                    if (item.href === "#logout") {
+                      e.preventDefault()
+                      handleLogout()
+                    }
+                  }}
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700/50 transition-colors"
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </a>
+              ))
+            ) : (
+              <div className="flex flex-col items-center gap-4">
+                {navItems.map((item, index) => (
+                  <a
+                    key={index}
+                    href={item.href}
+                    onClick={(e) => {
+                      if (item.href === "#logout") {
+                        e.preventDefault()
+                        handleLogout()
+                      }
+                    }}
+                    className="p-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700/50 transition-colors"
+                    title={item.label}
+                  >
+                    {item.icon}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        </nav>
+      </aside>
+
+      {/* Main Content */}
+      <div className={`flex-1 flex flex-col transition-all duration-300 ${isCollapsed ? "md:ml-16" : "md:ml-0"}`}>
+        {/* Header */}
+        <header
+          className={`sticky top-0 z-40 transition-all duration-300 ${
+            scrollY > 10 ? "bg-slate-800/80 backdrop-blur-sm border-b border-slate-700/50" : ""
+          }`}
+        >
+          <div className="px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center gap-3">
+                <button
+                  className="lg:hidden text-gray-300 hover:text-white transition-colors p-2 -ml-2 bg-slate-800/50 rounded-lg"
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                >
+                  {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+                </button>
+                <h1 className="text-xl font-semibold">Dashboard</h1>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => navigate("/chat")}
+                  className="p-2 text-green-400 hover:bg-green-400/10 rounded-lg transition-colors"
+                  title="Chat with Food AI"
+                >
+                  <MessageSquare size={20} />
+                </button>
+                <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
+                  <ChefHat size={20} className="text-white" />
                 </div>
               </div>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 pt-20 md:pt-24 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto">
-            <section className="mb-12">
-              <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                Welcome to Your <span className="text-[#4CAF50]">Cooking Hub</span>
+        {/* Main Content */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto custom-scrollbar">
+          {/* Welcome Section */}
+          <section className="mb-10">
+            <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6 md:p-8">
+              <h1 className="text-3xl md:text-4xl font-bold mb-4">
+                Welcome, <span className="text-green-400">{userData.username}</span>
               </h1>
-              <p className="text-xl text-gray-300 max-w-3xl">
-                Explore personalized recipes, plan your meals with our AI cooking assistant to elevate your cooking experience.
+              <p className="text-lg text-gray-300 max-w-3xl">
+                Explore personalized recipes, plan your meals with our AI cooking assistant to elevate your cooking
+                experience.
               </p>
-            </section>
-
-            <section className="mb-12">
-              <h2 className="text-2xl font-semibold mb-6">AI Cooking Assistant</h2>
-              <button
-                onClick={() => navigate('/chat')}
-                className="bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] hover:from-[#45a049] hover:to-[#5cb860] text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-[#4CAF50]/25 flex items-center justify-center w-full sm:w-auto"
-              >
-                <Bot className="w-5 h-5 mr-2" /> Chat Now
-              </button>
-            </section>
-
-            <section className="mb-12">
-              <h2 className="text-2xl font-semibold mb-6">Quick Actions</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <button className="bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] hover:from-[#45a049] hover:to-[#5cb860] text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-[#4CAF50]/25 flex items-center justify-center">
-                  <Plus className="w-5 h-5 mr-2" /> New Recipe
+              <div className="mt-6 flex flex-wrap gap-4">
+                <button
+                  onClick={() => navigate("/chat")}
+                  className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center gap-2"
+                >
+                  <Bot size={18} /> {userData.hasChats ? "Continue Chatting" : "Start Chatting"}
                 </button>
-                <button className="bg-[#2A1B3D]/50 backdrop-blur-sm border border-[#3A2F5F] hover:bg-[#2A1B3D]/70 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 mr-2" /> Plan Meal
-                </button>
-              </div>
-            </section>
-
-            <section className="mb-12">
-              <h2 className="text-2xl font-semibold mb-6">Saved Recipes</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                {savedRecipes.length > 0 ? (
-                  savedRecipes.slice(0, 3).map((recipeId) => {
-                    const recipe = recipeDetails[recipeId];
-                    return (
-                      <div
-                        key={recipeId}
-                        className="bg-[#2A1B3D]/50 backdrop-blur-sm border border-[#3A2F5F] rounded-2xl p-6 hover:bg-[#2A1B3D]/70 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-[#4CAF50]/10"
-                      >
-                        <h3 className="text-xl font-semibold mb-2">{recipe?.title || 'Loading...'}</h3>
-                        <p className="text-gray-400 text-sm">{recipe?.ingredients?.length ? 'Recipe' : 'No details'}</p>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p className="text-gray-400">No saved recipes yet.</p>
+                {userData.hasRecipes && (
+                  <button
+                    onClick={() => navigate("/recipes")}
+                    className="bg-slate-700/50 hover:bg-slate-700/70 text-white px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center gap-2"
+                  >
+                    <ChefHat size={18} /> View Your Recipes
+                  </button>
                 )}
               </div>
-            </section>
+            </div>
+          </section>
 
-            <section className="mb-12">
-              <div className="flex items-center justify-between mb-6 relative z-10">
-                <h2 className="text-2xl font-semibold">{weekHeader}</h2>
-                <div className="flex space-x-2">
-                  <button
-                    type="button"
-                    className="p-2 bg-[#2A1B3D]/50 rounded-full hover:bg-[#3A2F5F] text-gray-300 hover:text-[#4CAF50] transition-all duration-200 cursor-pointer pointer-events-auto z-30"
-                    onClick={() => navigateWeek('prev')}
-                    aria-label="Previous week"
+          {/* Saved Recipes Section */}
+          <section className="mb-10">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-semibold">Your Saved Recipes</h2>
+              <button
+                onClick={() => navigate("/recipes")}
+                className="text-green-400 hover:text-green-500 flex items-center gap-1 text-sm"
+              >
+                View All <ChevronRight size={16} />
+              </button>
+            </div>
+
+            {loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 animate-pulse h-32"
                   >
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                  <button
-                    type="button"
-                    className="p-2 bg-[#2A1B3D]/50 rounded-full hover:bg-[#3A2F5F] text-gray-300 hover:text-[#4CAF50] transition-all duration-200 cursor-pointer pointer-events-auto z-30"
-                    onClick={() => navigateWeek('next')}
-                    aria-label="Next week"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-                </div>
+                    <div className="h-6 bg-slate-700/50 rounded w-3/4 mb-3"></div>
+                    <div className="h-4 bg-slate-700/50 rounded w-1/2"></div>
+                  </div>
+                ))}
               </div>
-              <div className="bg-[#2A1B3D]/50 backdrop-blur-sm border border-[#3A2F5F] rounded-2xl p-6">
-                <div className="grid grid-cols-1 sm:grid-cols-7 gap-4">
-                  {calendarDays.map((day) => {
-                    const meal = mealPlans[day.dateStr];
-                    return (
-                      <div key={day.dateStr} className="flex flex-col">
-                        <div className="text-center text-gray-300 font-semibold mb-2">
-                          {day.dayName}
-                        </div>
-                        <div
-                          className={`p-4 rounded-lg ${
-                            day.isCurrentDay
-                              ? 'bg-[#4CAF50]/50 border border-[#66BB6A]'
-                              : 'bg-[#2A1B3D]/70 hover:bg-[#3A2F5F]/50'
-                          } transition-all duration-200 min-h-[120px] flex flex-col justify-between text-center`}
-                        >
-                          <div className="text-gray-300 font-semibold">
+            ) : recipes.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {recipes.map((recipe) => (
+                  <div
+                    key={recipe.recipe_id}
+                    onClick={() => navigate(`/recipes/${recipe.recipe_id}`)}
+                    className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:bg-slate-800/50 transition-all duration-300 cursor-pointer group"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                        <ChefHat size={20} className="text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold mb-1 group-hover:text-green-400 transition-colors line-clamp-2">
+                          {recipe.title}
+                        </h3>
+                        <p className="text-gray-400 text-sm">Click to view recipe</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-xl p-8 text-center">
+                <ChefHat size={40} className="mx-auto text-gray-500 mb-4" />
+                <h3 className="text-xl font-semibold mb-2">No Recipes Yet</h3>
+                <p className="text-gray-400 mb-6">Start chatting with Food AI to create and save recipes</p>
+                <button
+                  onClick={() => navigate("/chat")}
+                  className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center gap-2 mx-auto"
+                >
+                  <Bot size={18} /> Chat Now
+                </button>
+              </div>
+            )}
+          </section>
+
+          {/* Weekly Meal Plan Section */}
+          <section className="mb-10">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-semibold">{weekHeader}</h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => navigateWeek("prev")}
+                  className="p-2 bg-slate-800/50 rounded-lg hover:bg-slate-700/70 text-gray-300 hover:text-white transition-all duration-200"
+                  aria-label="Previous week"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  onClick={() => navigateWeek("next")}
+                  className="p-2 bg-slate-800/50 rounded-lg hover:bg-slate-700/70 text-gray-300 hover:text-white transition-all duration-200"
+                  aria-label="Next week"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-xl p-4 md:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-7 gap-3">
+                {calendarDays.map((day) => {
+                  const meal = mealPlans[day.dateStr]
+                  return (
+                    <div key={day.dateStr} className="flex flex-col">
+                      <div className="text-center text-gray-300 font-medium mb-2">{day.dayName}</div>
+                      <div
+                        className={`p-3 rounded-lg ${
+                          day.isCurrentDay
+                            ? "bg-green-500/20 border border-green-500/30"
+                            : "bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30"
+                        } transition-all duration-200 min-h-[100px] flex flex-col justify-between`}
+                      >
+                        <div className="text-center">
+                          <div className="text-gray-300 font-medium">
                             {day.month} {day.dayNumber}
                           </div>
-                          <p className="text-gray-400 text-sm mb-2">{meal?.meal || 'No meal planned'}</p>
-                          {meal ? (
-                            <button className="text-[#4CAF50] hover:text-[#66BB6A] text-sm">View Recipe</button>
-                          ) : (
-                            <button className="text-[#4CAF50] hover:text-[#66BB6A] text-sm">Add Meal</button>
-                          )}
+                          <p className="text-gray-400 text-sm mt-2 mb-3">{meal?.meal || "No meal planned"}</p>
                         </div>
+                        <button
+                          onClick={() => (meal ? handleViewRecipe(day.dateStr) : handleAddMeal(day.dateStr))}
+                          className="text-green-400 hover:text-green-500 text-sm mx-auto flex items-center gap-1"
+                        >
+                          {meal ? (
+                            "View Recipe"
+                          ) : (
+                            <>
+                              <Plus size={14} /> Add Meal
+                            </>
+                          )}
+                        </button>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  )
+                })}
               </div>
-            </section>
-          </div>
+            </div>
+          </section>
         </main>
 
-        <footer className={`border-t border-[#3A2F5F] py-8 px-4 sm:px-6 lg:px-8 ${isCollapsed ? 'md:pl-20' : 'md:pl-68'}`}>
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center">
+        {/* Footer */}
+        <footer className="border-t border-slate-700/50 py-6 px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
               <div className="relative">
-                <ChefHat className="w-8 h-8 text-[#4CAF50]" />
-                <Sparkles className="w-4 h-4 text-[#4CAF50] absolute -top-1 -right-1 animate-pulse" />
+                <ChefHat className="w-6 h-6 text-green-400" />
+                <Sparkles className="w-3 h-3 text-green-400 absolute -top-1 -right-1 animate-pulse" />
               </div>
-              <span className="text-xl font-bold">Food AI Assistant</span>
+              <span className="text-lg font-bold">Food AI Assistant</span>
             </div>
             <div className="flex space-x-8 text-gray-400">
-              <a href="#" className="hover:text-[#4CAF50] transition-colors">Privacy</a>
-              <a href="#" className="hover:text-[#4CAF50] transition-colors">Terms</a>
-              <a href="#" className="hover:text-[#4CAF50] transition-colors">Support</a>
+              <a href="#" className="hover:text-green-400 transition-colors">
+                Privacy
+              </a>
+              <a href="#" className="hover:text-green-400 transition-colors">
+                Terms
+              </a>
+              <a href="#" className="hover:text-green-400 transition-colors">
+                Support
+              </a>
             </div>
           </div>
         </footer>
       </div>
-    </div>
-  );
-};
 
-export default Dashboard;
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={() => setIsSidebarOpen(false)} />
+      )}
+
+      {/* Meal Plan Modal */}
+      {showMealPlanModal && (
+        <MealPlanModal
+          isOpen={showMealPlanModal}
+          onClose={() => setShowMealPlanModal(false)}
+          onSave={handleSaveMeal}
+          recipes={recipes}
+          date={selectedDate}
+        />
+      )}
+    </div>
+  )
+}
+
+// Meal Plan Modal Component
+const MealPlanModal: React.FC<MealPlanModalProps> = ({ isOpen, onClose, onSave, recipes, date }) => {
+  const [selectedTab, setSelectedTab] = useState<"existing" | "custom">("existing")
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null)
+  const [customRecipe, setCustomRecipe] = useState<string>("")
+  const [searchQuery, setSearchQuery] = useState<string>("")
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    // Focus the search input when the modal opens
+    if (isOpen && searchInputRef.current) {
+      setTimeout(() => {
+        searchInputRef.current?.focus()
+      }, 100)
+    }
+  }, [isOpen, selectedTab])
+
+  const handleSave = () => {
+    if (selectedTab === "existing" && selectedRecipe) {
+      onSave(selectedRecipe, false)
+    } else if (selectedTab === "custom" && customRecipe.trim()) {
+      onSave(customRecipe.trim(), true)
+    }
+  }
+
+  const filteredRecipes = recipes.filter((recipe) => recipe.title.toLowerCase().includes(searchQuery.toLowerCase()))
+
+  const formattedDate = new Date(date).toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+        <h3 className="text-xl font-semibold mb-2">Add Meal to Plan</h3>
+        <p className="text-gray-300 mb-4">For {formattedDate}</p>
+
+        {/* Tab Navigation */}
+        <div className="flex mb-4 border-b border-slate-700">
+          <button
+            className={`px-4 py-2 ${
+              selectedTab === "existing"
+                ? "text-green-400 border-b-2 border-green-400"
+                : "text-gray-400 hover:text-white"
+            }`}
+            onClick={() => setSelectedTab("existing")}
+          >
+            Choose Recipe
+          </button>
+          <button
+            className={`px-4 py-2 ${
+              selectedTab === "custom" ? "text-green-400 border-b-2 border-green-400" : "text-gray-400 hover:text-white"
+            }`}
+            onClick={() => setSelectedTab("custom")}
+          >
+            Custom Meal
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        <div className="flex-1 overflow-hidden">
+          {selectedTab === "existing" ? (
+            <div className="flex flex-col h-full">
+              <div className="mb-4 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Search recipes..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-green-500/30"
+                />
+              </div>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 max-h-60">
+                {filteredRecipes.length > 0 ? (
+                  filteredRecipes.map((recipe) => (
+                    <div
+                      key={recipe.recipe_id}
+                      onClick={() => setSelectedRecipe(recipe)}
+                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                        selectedRecipe?.recipe_id === recipe.recipe_id
+                          ? "bg-green-500/20 border border-green-500/30"
+                          : "bg-slate-700/50 hover:bg-slate-700/70 border border-slate-700/30"
+                      }`}
+                    >
+                      <h4 className="font-medium">{recipe.title}</h4>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-400">
+                    {searchQuery ? (
+                      <>
+                        <p>No recipes match your search</p>
+                        <button onClick={() => setSearchQuery("")} className="text-green-400 hover:text-green-500 mt-2">
+                          Clear search
+                        </button>
+                      </>
+                    ) : (
+                      <p>No recipes available. Create a recipe first.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div className="mb-4">
+                <label htmlFor="custom-meal" className="block text-sm font-medium text-gray-300 mb-2">
+                  Custom Meal Name
+                </label>
+                <input
+                  type="text"
+                  id="custom-meal"
+                  value={customRecipe}
+                  onChange={(e) => setCustomRecipe(e.target.value)}
+                  placeholder="E.g., Takeout Pizza"
+                  className="w-full bg-slate-900 text-white border border-slate-700 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-green-500/50"
+                  autoFocus
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-4 mt-4 pt-4 border-t border-slate-700">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={
+              (selectedTab === "existing" && !selectedRecipe) || (selectedTab === "custom" && !customRecipe.trim())
+            }
+            className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Calendar size={16} />
+            Add to Plan
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default Dashboard

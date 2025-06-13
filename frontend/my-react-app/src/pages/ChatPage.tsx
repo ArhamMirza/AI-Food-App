@@ -334,7 +334,7 @@ const ChatPage = () => {
 
     setLoading(true)
     try {
-      const data = await apiCall("save-recipe", {
+      const data = await apiCall("/save-recipe", {
         method: "POST",
         body: JSON.stringify({
           user_id: USER_ID,
