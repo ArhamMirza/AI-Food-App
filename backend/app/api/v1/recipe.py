@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, BackgroundTasks
 from typing import Dict, Any, List
+from datetime import datetime
 from fastapi import HTTPException, status
 import json
 from app.models.recipe import RecipeSearchRequest, RecipeSearchResponse, RecipeResponse, RecipeListResponse
@@ -115,3 +116,47 @@ async def get_recipe_by_id(recipe_id: str):
             status_code=500,
             detail=f"Internal server error: {str(e)}"
         )
+    
+from fastapi import Body
+
+@router.put("/{recipe_id}", response_model=RecipeSearchResponse)
+async def update_recipe(recipe_id: str, body: Dict[str, Any] = Body(...)):
+    """
+    Update a recipe's title and content by its ID.
+
+    Args:
+        recipe_id: ID of the recipe
+        body: JSON with updated 'title' and 'content'
+
+    Returns:
+        RecipeSearchResponse with updated recipe data
+    """
+    try:
+        title = body.get("title", "").strip()
+        content = body.get("content", "").strip()
+
+        if not title or not content:
+            raise HTTPException(status_code=400, detail="Title and content must not be empty")
+
+        update_data = {
+            "title": title,
+            "content": {"text": content}
+        }
+
+        updated = await RecipeSchema.update(recipe_id, update_data)
+
+        if not updated:
+            raise HTTPException(status_code=404, detail="Recipe not found or not updated")
+
+        updated_recipe = await RecipeSchema.find_by_id(recipe_id)
+
+        return RecipeSearchResponse(
+            success=True,
+            data=document_to_recipe_response(updated_recipe),
+            message="Recipe updated successfully"
+        )
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")

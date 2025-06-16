@@ -456,10 +456,11 @@ const RecipesPage: React.FC = () => {
                   {filteredRecipes.map((recipe) => (
                     <div
                       key={recipe.recipe_id}
-                      className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:bg-slate-800/50 transition-all duration-300"
+                      className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:bg-slate-800/50 transition-all duration-300 cursor-pointer"
+                      onClick={() => navigate(`/recipes/${recipe.recipe_id}`)}
                     >
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
+                        <div className="flex-1">
                           <h3 className="text-xl font-semibold mb-2">{recipe.title}</h3>
                           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-400">
                             <div className="flex items-center gap-1">
@@ -478,7 +479,10 @@ const RecipesPage: React.FC = () => {
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 self-end md:self-auto">
+                        <div
+                          className="flex items-center gap-2 self-end md:self-auto"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <button
                             onClick={() => handleAddToMealPlan(recipe)}
                             className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors"
@@ -502,6 +506,7 @@ const RecipesPage: React.FC = () => {
                           </button>
                         </div>
                       </div>
+                     
                     </div>
                   ))}
                 </div>
@@ -767,6 +772,9 @@ const MealPlanModal: React.FC<MealPlanModalProps> = ({ isOpen, onClose, onSave, 
                 >
                   <ChevronLeft size={20} />
                 </button>
+                <div className="font-medium text-lg">
+                  {currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                </div>
                 <div className="font-medium text-lg">
                   {currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
                 </div>

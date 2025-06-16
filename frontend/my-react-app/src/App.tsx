@@ -8,6 +8,7 @@ import CreateRecipe from './pages/CreateRecipe'
 import ChatPage from './pages/ChatPage'
 import RecipesPage from './pages/RecipesPage'
 import RecipeViewPage from './pages/RecipeViewPage'
+import MealPlanPage from './pages/MealPlanPage'
 function App() {
 
   return (
@@ -21,6 +22,8 @@ function App() {
         <Route path="/chat" element={<ChatPage/>}/>
         <Route path="/recipes" element={<RecipesPage/>}/>
         <Route path="/recipes/:recipeId" element={<RecipeViewPage/>}/>
+        <Route path="/meal-plans" element={<MealPlanPage/>}/>
+
 
 
 
