@@ -17,6 +17,9 @@ import {
   MessageSquare,
   Plus,
   Search,
+  Clock,
+  Coffee,
+  Soup,
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 
@@ -33,13 +36,13 @@ interface Recipe {
 }
 
 interface MealPlan {
-  meal: string
+  meal_plan_id: string
+  user_id: string
+  date: string
+  meal_type: "breakfast" | "lunch" | "dinner" | "snack"
   recipe_id?: string
-  custom: boolean
-}
-
-interface MealPlans {
-  [date: string]: MealPlan
+  recipe_title?: string
+  notes?: string
 }
 
 interface MealPlanModalProps {
@@ -50,6 +53,12 @@ interface MealPlanModalProps {
   date: string
 }
 
+interface ApiResponse<T> {
+  success: boolean
+  data: T
+  message: string
+}
+
 const Dashboard: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false)
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false)
@@ -57,13 +66,14 @@ const Dashboard: React.FC = () => {
   const [weekOffset, setWeekOffset] = useState<number>(0)
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [loading, setLoading] = useState<boolean>(true)
-  const [mealPlans, setMealPlans] = useState<MealPlans>({})
+  const [mealPlans, setMealPlans] = useState<MealPlan[]>([])
   const [showMealPlanModal, setShowMealPlanModal] = useState<boolean>(false)
   const [selectedDate, setSelectedDate] = useState<string>("")
   const navigate = useNavigate()
 
   const API_BASE_URL = "http://localhost:8000/api/v1"
   const RECIPE_URL = `${API_BASE_URL}/recipe`
+  const MEAL_PLAN_URL = `${API_BASE_URL}/meal-plan`
   const USER_ID = "683ac8b1dcd4216109341d9f" // This would normally come from auth context
 
   // In the fetchUserRecipes function, add a state for user data
@@ -96,7 +106,7 @@ const Dashboard: React.FC = () => {
       setLoading(true)
       const response = await fetch(`${RECIPE_URL}/user/${USER_ID}`)
       if (!response.ok) throw new Error(`API call failed: ${response.status}`)
-      const data = await response.json()
+      const data: ApiResponse<Recipe[]> = await response.json()
       const fetchedRecipes = Array.isArray(data.data) ? data.data : []
       setRecipes(fetchedRecipes)
 
@@ -104,7 +114,7 @@ const Dashboard: React.FC = () => {
       setUserData((prev) => ({
         ...prev,
         hasRecipes: fetchedRecipes.length > 0,
-        username: data.username || "Chef", // Assuming the API returns username
+        username: "Chef", // You can update this when you have user data from API
       }))
     } catch (error) {
       console.error("Failed to load recipes:", error)
@@ -131,11 +141,13 @@ const Dashboard: React.FC = () => {
 
   const fetchMealPlans = async () => {
     try {
-      // This would be replaced with an actual API call to get meal plans
-      // For now, we'll start with an empty object as requested
-      setMealPlans({})
+      const response = await fetch(`${MEAL_PLAN_URL}/user/${USER_ID}`)
+      if (!response.ok) throw new Error(`Failed to fetch meal plans: ${response.status}`)
+      const data: ApiResponse<MealPlan[]> = await response.json()
+      setMealPlans(data.data || [])
     } catch (error) {
       console.error("Failed to load meal plans:", error)
+      setMealPlans([])
     }
   }
 
@@ -156,23 +168,32 @@ const Dashboard: React.FC = () => {
 
   const handleSaveMeal = async (recipeData: string | Recipe, isCustom: boolean) => {
     try {
-      // In a real app, this would be an API call to save the meal plan
-      const newMealPlan: MealPlan = isCustom
-        ? {
-            meal: recipeData as string,
-            custom: true,
-          }
-        : {
-            meal: (recipeData as Recipe).title,
-            recipe_id: (recipeData as Recipe).recipe_id,
-            custom: false,
-          }
+      // Create meal plan via API
+      const payload = {
+        user_id: USER_ID,
+        date: selectedDate,
+        meal_type: "dinner", // Default to dinner for dashboard
+        recipe_id: isCustom ? undefined : (recipeData as Recipe).recipe_id,
+        recipe_title: isCustom ? (recipeData as string) : (recipeData as Recipe).title,
+        notes: "",
+      }
+
+      const response = await fetch(MEAL_PLAN_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to save meal plan: ${response.status}`)
+      }
+
+      const data: ApiResponse<MealPlan> = await response.json()
 
       // Update the meal plans state
-      setMealPlans((prev) => ({
-        ...prev,
-        [selectedDate]: newMealPlan,
-      }))
+      setMealPlans((prev) => [...prev, data.data])
 
       // Close the modal
       setShowMealPlanModal(false)
@@ -181,16 +202,13 @@ const Dashboard: React.FC = () => {
     }
   }
 
-  const handleViewRecipe = (date: string) => {
-    const mealPlan = mealPlans[date]
-    if (!mealPlan) return
-
-    if (mealPlan.custom) {
-      // For custom meals, we could show a modal with the meal details
-      alert(`Custom meal: ${mealPlan.meal}`)
-    } else if (mealPlan.recipe_id) {
+  const handleViewRecipe = (mealPlan: MealPlan) => {
+    if (mealPlan.recipe_id) {
       // For recipes, navigate to the recipe page
       navigate(`/recipes/${mealPlan.recipe_id}`)
+    } else {
+      // For custom meals, show alert with meal title
+      alert(`Meal: ${mealPlan.recipe_title}`)
     }
   }
 
@@ -220,6 +238,35 @@ const Dashboard: React.FC = () => {
   const weekStart = calendarDays[0]
   const weekEnd = calendarDays[6]
   const weekHeader = `Your Meal Plan - ${weekStart.month} ${weekStart.dayNumber} - ${weekEnd.month} ${weekEnd.dayNumber}, ${currentDate.getFullYear()}`
+
+  // Helper function to get all meals for a specific date, sorted by meal type
+  const getMealsForDate = (date: string) => {
+    const mealsForDate = mealPlans.filter((mp) => mp.date === date)
+    // Sort by meal type priority: breakfast, lunch, dinner, snack
+    const mealOrder = { breakfast: 1, lunch: 2, dinner: 3, snack: 4 }
+    return mealsForDate.sort((a, b) => mealOrder[a.meal_type] - mealOrder[b.meal_type])
+  }
+
+  // Helper function to get meal type icon and color
+  const getMealTypeInfo = (mealType: "breakfast" | "lunch" | "dinner" | "snack") => {
+    switch (mealType) {
+      case "breakfast":
+        return { icon: <Coffee size={12} />, color: "bg-orange-500/20 text-orange-400 border-orange-500/30" }
+      case "lunch":
+        return { icon: <Soup size={12} />, color: "bg-blue-500/20 text-blue-400 border-blue-500/30" }
+      case "dinner":
+        return { icon: <Utensils size={12} />, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" }
+      case "snack":
+        return { icon: <Clock size={12} />, color: "bg-green-500/20 text-green-400 border-green-500/30" }
+      default:
+        return { icon: <Utensils size={12} />, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" }
+    }
+  }
+
+  // Helper function to truncate long meal names
+  const truncateMealName = (name: string, maxLength = 20) => {
+    return name.length > maxLength ? `${name.substring(0, maxLength)}...` : name
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-hidden flex">
@@ -424,7 +471,7 @@ const Dashboard: React.FC = () => {
                 {recipes.map((recipe) => (
                   <div
                     key={recipe.recipe_id}
-                    onClick={() => navigate(`/recipes/${recipe.recipe_id}`)}
+                    onClick={() => navigate(`/recipe/${recipe.recipe_id}`)}
                     className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:bg-slate-800/50 transition-all duration-300 cursor-pointer group"
                   >
                     <div className="flex items-start gap-3">
@@ -481,7 +528,7 @@ const Dashboard: React.FC = () => {
             <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-xl p-4 md:p-6">
               <div className="grid grid-cols-1 sm:grid-cols-7 gap-3">
                 {calendarDays.map((day) => {
-                  const meal = mealPlans[day.dateStr]
+                  const meals = getMealsForDate(day.dateStr)
                   return (
                     <div key={day.dateStr} className="flex flex-col">
                       <div className="text-center text-gray-300 font-medium mb-2">{day.dayName}</div>
@@ -490,26 +537,53 @@ const Dashboard: React.FC = () => {
                           day.isCurrentDay
                             ? "bg-green-500/20 border border-green-500/30"
                             : "bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30"
-                        } transition-all duration-200 min-h-[100px] flex flex-col justify-between`}
+                        } transition-all duration-200 min-h-[160px] flex flex-col`}
                       >
-                        <div className="text-center">
+                        {/* Date Header */}
+                        <div className="text-center mb-3">
                           <div className="text-gray-300 font-medium">
                             {day.month} {day.dayNumber}
                           </div>
-                          <p className="text-gray-400 text-sm mt-2 mb-3">{meal?.meal || "No meal planned"}</p>
                         </div>
-                        <button
-                          onClick={() => (meal ? handleViewRecipe(day.dateStr) : handleAddMeal(day.dateStr))}
-                          className="text-green-400 hover:text-green-500 text-sm mx-auto flex items-center gap-1"
-                        >
-                          {meal ? (
-                            "View Recipe"
+
+                        {/* Meals List */}
+                        <div className="flex-1 space-y-2">
+                          {meals.length > 0 ? (
+                            meals.map((meal) => {
+                              const mealInfo = getMealTypeInfo(meal.meal_type)
+                              return (
+                                <div
+                                  key={meal.meal_plan_id}
+                                  onClick={() => handleViewRecipe(meal)}
+                                  className={`p-2 rounded-md border cursor-pointer hover:scale-105 transition-transform ${mealInfo.color}`}
+                                >
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    {mealInfo.icon}
+                                    <span className="text-xs font-medium capitalize">{meal.meal_type}</span>
+                                  </div>
+                                  <div className="text-xs text-gray-200 leading-tight">
+                                    {truncateMealName(meal.recipe_title || "Unknown Meal")}
+                                  </div>
+                                </div>
+                              )
+                            })
                           ) : (
-                            <>
-                              <Plus size={14} /> Add Meal
-                            </>
+                            <div className="text-center py-4">
+                              <p className="text-gray-400 text-xs mb-2">No meals planned</p>
+                            </div>
                           )}
-                        </button>
+                        </div>
+
+                        {/* Add Meal Button */}
+                        <div className="mt-3 pt-2 border-t border-slate-700/30">
+                          <button
+                            onClick={() => handleAddMeal(day.dateStr)}
+                            className="w-full text-green-400 hover:text-green-300 text-xs flex items-center justify-center gap-1 py-1 hover:bg-green-500/10 rounded transition-colors"
+                          >
+                            <Plus size={12} />
+                            Add Meal
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )
