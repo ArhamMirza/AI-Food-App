@@ -9,6 +9,7 @@ from app.models.meal import (
     MealPlanWeekRequest
 )
 from app.schemas.meal_schema import MealPlanSchema
+from app.core.auth import get_token_payload
 from datetime import datetime, timedelta  
 
 
@@ -30,7 +31,10 @@ def document_to_meal_plan_response(doc: Dict[str, Any]) -> MealPlanResponse:
     )
 
 @router.post("/", response_model=MealPlanSingleResponse)
-async def create_meal_plan(request: MealPlanCreateRequest):
+async def create_meal_plan(
+    request: MealPlanCreateRequest,
+    token_payload: dict = Depends(get_token_payload)
+    ):
     """
     Create a new meal plan.
 
@@ -65,7 +69,10 @@ async def create_meal_plan(request: MealPlanCreateRequest):
         )
 
 @router.get("/user/{user_id}", response_model=MealPlanListResponse)
-async def get_meal_plans_by_user(user_id: str):
+async def get_meal_plans_by_user(
+    user_id: str,
+    token_payload: dict = Depends(get_token_payload)
+    ):
     """
     Get all meal plans for a given user.
 
@@ -89,7 +96,10 @@ async def get_meal_plans_by_user(user_id: str):
         )
 
 @router.get("/{meal_plan_id}", response_model=MealPlanSingleResponse)
-async def get_meal_plan_by_id(meal_plan_id: str):
+async def get_meal_plan_by_id(
+    meal_plan_id: str,
+    token_payload: dict = Depends(get_token_payload)
+    ):
     """
     Get a specific meal plan by its ID.
 
@@ -120,7 +130,11 @@ async def get_meal_plan_by_id(meal_plan_id: str):
         )
 
 @router.put("/{meal_plan_id}", response_model=MealPlanSingleResponse)
-async def update_meal_plan(meal_plan_id: str, request: MealPlanUpdateRequest):
+async def update_meal_plan(
+    meal_plan_id: str, 
+    request: MealPlanUpdateRequest, 
+    token_payload: dict = Depends(get_token_payload)
+    ):
     """
     Update an existing meal plan.
 
@@ -156,7 +170,10 @@ async def update_meal_plan(meal_plan_id: str, request: MealPlanUpdateRequest):
         )
 
 @router.delete("/{meal_plan_id}", response_model=Dict[str, Any])
-async def delete_meal_plan(meal_plan_id: str):
+async def delete_meal_plan(
+    meal_plan_id: str,
+    token_payload: dict = Depends(get_token_payload)
+    ):
     """
     Delete a meal plan by its ID.
 
@@ -184,7 +201,10 @@ async def delete_meal_plan(meal_plan_id: str):
         )
 
 @router.post("/week", response_model=MealPlanListResponse)
-async def get_meal_plans_for_week(request: MealPlanWeekRequest):
+async def get_meal_plans_for_week(
+    request: MealPlanWeekRequest,
+    token_payload: dict = Depends(get_token_payload)
+    ):
     """
     Get meal plans for a user within a week.
 

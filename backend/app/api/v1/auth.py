@@ -7,6 +7,7 @@ from app.models.auth import (
 )
 from app.services.auth_service import AuthService
 from app.api.deps import get_current_active_user
+from app.core.auth import get_refresh_token_payload_from_cookie
 
 router = APIRouter()
 
@@ -28,7 +29,17 @@ async def verify_email(token: str, auth_service: AuthService = Depends()):
 
 @router.post("/google", response_model=TokenResponse)
 async def google_login(request: GoogleAuthRequest, auth_service: AuthService = Depends()):
+    print(request)
     return await auth_service.google_authenticate(request)
+
+@router.post("/refresh", response_model=TokenResponse)
+async def refresh_token(
+    token_payload: dict = Depends(get_refresh_token_payload_from_cookie),
+    auth_service: AuthService = Depends()
+):
+    return await auth_service.refresh_access_token(token_payload)
+
+
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: dict = Depends(get_current_active_user)):

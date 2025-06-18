@@ -77,104 +77,196 @@ const RecipeViewPage: React.FC = () => {
 
   const fetchRecipe = async (id: string) => {
     try {
-      setLoading(true)
-      const response = await fetch(`${RECIPE_URL}/${id}`)
-      if (!response.ok) throw new Error(`API call failed: ${response.status}`)
-      const data = await response.json()
+      setLoading(true);
+
+      const accessToken = localStorage.getItem("access_token"); // or sessionStorage, or from memory
+
+      const response = await fetch(`${RECIPE_URL}/${id}`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) throw new Error(`API call failed: ${response.status}`);
+
+      const data = await response.json();
 
       if (data.data) {
-        setRecipe(data.data)
-        setEditTitle(data.data.title)
-        setEditContent(data.data.content?.text || "")
+        setRecipe(data.data);
+        setEditTitle(data.data.title);
+        setEditContent(data.data.content?.text || "");
 
         // Extract ingredients from recipe content
-        extractIngredients(data.data.content?.text || "")
+        extractIngredients(data.data.content?.text || "");
       }
     } catch (error) {
-      console.error("Failed to load recipe:", error)
+      console.error("Failed to load recipe:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
+
 
   const extractIngredients = (content: string) => {
-    // Look for sections that might contain ingredients
     const lines = content.split("\n")
     const extractedIngredients: Ingredient[] = []
 
     let inIngredientsSection = false
+    let currentSectionStart = -1
 
-    for (const line of lines) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
       const trimmedLine = line.trim()
 
-      // Check if this line might be a section header for ingredients
-      if (
-        trimmedLine.toLowerCase().includes("ingredient") ||
-        trimmedLine.toLowerCase().includes("you'll need") ||
-        trimmedLine.toLowerCase().includes("you need") ||
-        trimmedLine.toLowerCase().includes("shopping list")
-      ) {
-        inIngredientsSection = true
-        continue
+      // Check if this line is a heading (starts with #)
+      if (trimmedLine.startsWith("#")) {
+        // If we were in an ingredients section, stop here
+        if (inIngredientsSection && currentSectionStart !== i) {
+          break
+        }
+
+        // Check if this heading contains ingredients-related keywords
+        const headingText = trimmedLine.toLowerCase()
+        if (
+          headingText.includes("ingredient") ||
+          headingText.includes("you'll need") ||
+          headingText.includes("you need") ||
+          headingText.includes("shopping list") ||
+          headingText.includes("what you need") ||
+          headingText.includes("supplies") ||
+          headingText.includes("materials")
+        ) {
+          inIngredientsSection = true
+          currentSectionStart = i
+          continue
+        } else {
+          inIngredientsSection = false
+        }
       }
 
-      // Check if we've reached the end of the ingredients section
-      if (
-        inIngredientsSection &&
-        (trimmedLine.toLowerCase().includes("instruction") ||
-          trimmedLine.toLowerCase().includes("direction") ||
-          trimmedLine.toLowerCase().includes("method") ||
-          trimmedLine.toLowerCase().includes("step") ||
-          trimmedLine === "")
-      ) {
-        inIngredientsSection = false
-      }
+      // If we're in the ingredients section and the line isn't empty and isn't a heading
+      if (inIngredientsSection && trimmedLine && !trimmedLine.startsWith("#")) {
+        // Skip lines that look like section headers or recipe step titles
+        const lowerLine = trimmedLine.toLowerCase()
 
-      // If we're in the ingredients section and the line isn't empty
-      if (inIngredientsSection && trimmedLine) {
+        // Skip lines that end with colon (likely section headers)
+        if (trimmedLine.endsWith(":")) {
+          continue
+        }
+
+        // Skip lines that start with "For the" or "For" followed by a colon or capitalized word
+        if (lowerLine.startsWith("for the ") || lowerLine.startsWith("for ")) {
+          continue
+        }
+
+        // Skip lines that look like recipe step headers
+        if (lowerLine.includes("step ") || lowerLine.includes("phase ") || lowerLine.includes("part ")) {
+          continue
+        }
+
         // Try to separate quantity from ingredient name
         const match = trimmedLine.match(
           /^([\d/.\s]+\s*(?:cup|cups|tbsp|tsp|tablespoon|teaspoon|oz|ounce|lb|pound|g|gram|ml|liter|pinch|dash|to taste|handful|piece|clove|cloves|bunch|can|package|stick|slice|slices)s?\.?)?\s*(.+)$/i,
         )
 
         if (match && match[2]) {
-          extractedIngredients.push({
-            id: `ing-${extractedIngredients.length}`,
-            name: match[2].trim().replace(/^-\s*/, ""),
-            quantity: match[1]?.trim() || "",
-            checked: false,
-          })
-        } else if (trimmedLine.startsWith("- ") || trimmedLine.startsWith("* ")) {
+          const ingredientName = match[2].trim().replace(/^[-*•]\s*/, "")
+          // Skip if the ingredient name looks like a section header
+          if (!ingredientName.endsWith(":") && !ingredientName.toLowerCase().startsWith("for the")) {
+            extractedIngredients.push({
+              id: `ing-${extractedIngredients.length}`,
+              name: ingredientName,
+              quantity: match[1]?.trim() || "",
+              checked: false,
+            })
+          }
+        } else if (trimmedLine.startsWith("- ") || trimmedLine.startsWith("* ") || trimmedLine.startsWith("• ")) {
           // Handle bullet points
-          extractedIngredients.push({
-            id: `ing-${extractedIngredients.length}`,
-            name: trimmedLine.substring(2).trim(),
-            quantity: "",
-            checked: false,
-          })
+          const ingredientText = trimmedLine.substring(2).trim()
+          if (!ingredientText.endsWith(":") && !ingredientText.toLowerCase().startsWith("for the")) {
+            extractedIngredients.push({
+              id: `ing-${extractedIngredients.length}`,
+              name: ingredientText,
+              quantity: "",
+              checked: false,
+            })
+          }
+        } else if (/^\d+\./.test(trimmedLine)) {
+          // Handle numbered lists
+          const ingredientText = trimmedLine.replace(/^\d+\.\s*/, "").trim()
+          if (!ingredientText.endsWith(":") && !ingredientText.toLowerCase().startsWith("for the")) {
+            extractedIngredients.push({
+              id: `ing-${extractedIngredients.length}`,
+              name: ingredientText,
+              quantity: "",
+              checked: false,
+            })
+          }
         } else {
-          extractedIngredients.push({
-            id: `ing-${extractedIngredients.length}`,
-            name: trimmedLine,
-            quantity: "",
-            checked: false,
-          })
+          // Handle plain text ingredients
+          if (!trimmedLine.endsWith(":") && !lowerLine.startsWith("for the")) {
+            extractedIngredients.push({
+              id: `ing-${extractedIngredients.length}`,
+              name: trimmedLine,
+              quantity: "",
+              checked: false,
+            })
+          }
         }
       }
     }
 
-    // If we didn't find a dedicated ingredients section, try to extract from bullet points or numbered lists
+    // If we didn't find a dedicated ingredients section with # headings,
+    // fall back to the original method for backward compatibility
     if (extractedIngredients.length === 0) {
+      let inIngredientsSection = false
+
       for (const line of lines) {
         const trimmedLine = line.trim()
-        if (trimmedLine.startsWith("- ") || trimmedLine.startsWith("* ") || /^\d+\./.test(trimmedLine)) {
-          const ingredientText = trimmedLine.replace(/^[-*\d.]+\s*/, "").trim()
-          extractedIngredients.push({
-            id: `ing-${extractedIngredients.length}`,
-            name: ingredientText,
-            quantity: "",
-            checked: false,
-          })
+        const lowerLine = trimmedLine.toLowerCase()
+
+        // Check if this line might be a section header for ingredients (non-# format)
+        if (
+          lowerLine.includes("ingredient") ||
+          lowerLine.includes("you'll need") ||
+          lowerLine.includes("you need") ||
+          lowerLine.includes("shopping list")
+        ) {
+          inIngredientsSection = true
+          continue
+        }
+
+        // Check if we've reached the end of the ingredients section
+        if (
+          inIngredientsSection &&
+          (lowerLine.includes("instruction") ||
+            lowerLine.includes("direction") ||
+            lowerLine.includes("method") ||
+            lowerLine.includes("step") ||
+            trimmedLine === "")
+        ) {
+          inIngredientsSection = false
+        }
+
+        // If we're in the ingredients section and the line isn't empty
+        if (inIngredientsSection && trimmedLine) {
+          // Skip section headers
+          if (trimmedLine.endsWith(":") || lowerLine.startsWith("for the")) {
+            continue
+          }
+
+          if (trimmedLine.startsWith("- ") || trimmedLine.startsWith("* ") || /^\d+\./.test(trimmedLine)) {
+            const ingredientText = trimmedLine.replace(/^[-*\d.]+\s*/, "").trim()
+            if (!ingredientText.endsWith(":") && !ingredientText.toLowerCase().startsWith("for the")) {
+              extractedIngredients.push({
+                id: `ing-${extractedIngredients.length}`,
+                name: ingredientText,
+                quantity: "",
+                checked: false,
+              })
+            }
+          }
         }
       }
     }
@@ -183,22 +275,25 @@ const RecipeViewPage: React.FC = () => {
   }
 
   const handleUpdateRecipe = async () => {
-    if (!recipe || !editTitle.trim() || !editContent.trim()) return
+    if (!recipe || !editTitle.trim() || !editContent.trim()) return;
 
     try {
-      setLoading(true)
+      setLoading(true);
+      const accessToken = localStorage.getItem("access_token");
+
       const response = await fetch(`${RECIPE_URL}/${recipe.recipe_id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           title: editTitle.trim(),
           content: editContent.trim(),
         }),
-      })
+      });
 
-      if (!response.ok) throw new Error(`API call failed: ${response.status}`)
+      if (!response.ok) throw new Error(`API call failed: ${response.status}`);
 
       // Update the local recipe state
       setRecipe({
@@ -206,19 +301,16 @@ const RecipeViewPage: React.FC = () => {
         title: editTitle.trim(),
         content: { text: editContent.trim() },
         updated_at: new Date().toISOString(),
-      })
+      });
 
-      // Extract ingredients from updated content
-      extractIngredients(editContent.trim())
-
-      // Exit edit mode
-      setIsEditing(false)
+      extractIngredients(editContent.trim());
+      setIsEditing(false);
     } catch (error) {
-      console.error("Failed to update recipe:", error)
+      console.error("Failed to update recipe:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleDeleteRecipe = async () => {
     if (!recipe || !window.confirm("Are you sure you want to delete this recipe?")) return
@@ -348,13 +440,13 @@ const RecipeViewPage: React.FC = () => {
         <nav className="flex-1 p-4 overflow-y-auto custom-scrollbar">
           {!isCollapsed && (
             <div className="space-y-2">
-              <a
-                href="/recipes"
+              <button
+                onClick={() => navigate("/recipes")}
                 className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700/50 transition-colors"
               >
                 <ChevronLeft size={18} />
                 <span>Back to Recipes</span>
-              </a>
+              </button>
               <a
                 href="/dashboard"
                 className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700/50 transition-colors"

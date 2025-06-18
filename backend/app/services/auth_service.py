@@ -4,7 +4,7 @@ import httpx
 from typing import Dict, Any
 
 from app.models.user import UserCreate, UserRole
-from app.models.auth import UserLogin, TokenResponse, GoogleAuthRequest
+from app.models.auth import UserLogin, TokenResponse, GoogleAuthRequest, RefreshTokenRequest
 from app.schemas.user_schema import UserSchema
 from app.core.security import (
     verify_password, 
@@ -12,8 +12,12 @@ from app.core.security import (
     create_access_token, 
     create_refresh_token
 )
+from app.firebase import firebase_auth,firebase_admin
 from app.services.email_service import send_verification_email, send_password_reset_email
 from app.config import settings
+from firebase_admin.exceptions import FirebaseError
+from bson import ObjectId
+
 
 class AuthService:
     def __init__(self):
@@ -59,8 +63,8 @@ class AuthService:
         if not user["is_email_verified"]:
             raise HTTPException(status_code=401, detail="Please verify your email before logging in")
         
-        access_token = create_access_token(data={"sub": str(user["_id"])})
-        refresh_token = create_refresh_token(data={"sub": str(user["_id"])})
+        access_token = create_access_token(data={"sub": str(user["_id"]), "type":"access"})
+        refresh_token = create_refresh_token(data={"sub": str(user["_id"]), "type":"refresh"})
         
         return TokenResponse(
             access_token=access_token,
@@ -101,20 +105,19 @@ class AuthService:
 
         return {"message": "Email verified and account created successfully"}
 
+
     async def google_authenticate(self, request: GoogleAuthRequest) -> TokenResponse:
-        async with httpx.AsyncClient() as client:
-            google_response = await client.get(
-                f"https://www.googleapis.com/oauth2/v1/userinfo?access_token={request.token}"
-            )
+        try:
+            # Verify the Firebase ID token
+            decoded_token = firebase_auth.verify_id_token(request.token)
             
-            if google_response.status_code != 200:
-                raise HTTPException(status_code=400, detail="Invalid Google token")
-            
-            google_user = google_response.json()
-            email = google_user.get("email")
+            # Extract user information from the decoded token
+            email = decoded_token.get("email")
+            google_id = decoded_token.get("uid")  # Firebase UID
+            name = decoded_token.get("name", "")
             
             if not email:
-                raise HTTPException(status_code=400, detail="Email not provided by Google")
+                raise HTTPException(status_code=400, detail="Email not provided by Firebase")
             
             # Check if user exists
             user = await UserSchema.find_by_email(email.lower())
@@ -132,23 +135,77 @@ class AuthService:
                     "username": username,
                     "email": email.lower(),
                     "password": None,
-                    "is_email_verified": True,
+                    "is_email_verified": True,  # Firebase handles email verification
                     "role": UserRole.USER,
                     "preferences": {},
                     "saved_recipes": [],
                     "shopping_lists": [],
                     "meal_plans": [],
-                    "auth_provider": "google",
-                    "google_id": google_user.get("id")
+                    "auth_provider": "firebase",
+                    "firebase_uid": google_id,
+                    "display_name": name
                 }
                 
                 user = await UserSchema.create(user_dict)
-            
-            access_token = create_access_token(data={"sub": str(user["_id"])})
-            refresh_token = create_refresh_token(data={"sub": str(user["_id"])})
+            else:
+                # Update existing user with Firebase UID if not set
+                if not user.get("firebase_uid"):
+                    await UserSchema.update(
+                        str(user["_id"]),  # Convert ObjectId to string if needed
+                        {
+                            "firebase_uid": google_id,
+                            "auth_provider": "firebase"
+                        }
+                    )
+
+            access_token = create_access_token(data={"sub": str(user["_id"]),"type":"access"})
+            refresh_token = create_refresh_token(data={"sub": str(user["_id"]),"type":"refresh"})
             
             return TokenResponse(
                 access_token=access_token,
                 refresh_token=refresh_token,
                 expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
             )
+            
+        except FirebaseError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid Firebase token: {str(e)}")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Authentication failed: {str(e)}")
+        
+    async def refresh_access_token(self, token_payload: dict) -> TokenResponse:
+        """
+        Refresh access token using a valid refresh token payload.
+        """
+
+        token_type = token_payload.get("type")
+        user_id = token_payload.get("sub")
+
+        if token_type != "refresh":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token type"
+            )
+
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload"
+            )
+
+        user = await UserSchema.find_by_id(user_id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found"
+            )
+
+        # Create new tokens
+        access_token = create_access_token(data={"sub": str(user["_id"]), "type": "access"})
+        refresh_token = create_refresh_token(data={"sub": str(user["_id"]), "type": "refresh"})
+
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer",
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        )
