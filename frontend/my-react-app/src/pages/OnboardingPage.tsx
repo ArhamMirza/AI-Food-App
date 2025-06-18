@@ -1,0 +1,562 @@
+"use client"
+
+import type React from "react"
+import { useState } from "react"
+import {
+  ChefHat,
+  Sparkles,
+  ArrowRight,
+  SkipBackIcon as Skip,
+  Save,
+  X,
+  Check,
+  AlertCircle,
+  Clock,
+  Utensils,
+  Heart,
+} from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { useAppSelector, useAppDispatch } from "../redux/hooks"
+
+interface UserPreferences {
+  dietary_restrictions: string[]
+  allergies: string[]
+  favorite_cuisines: string[]
+  disliked_ingredients: string[]
+  cooking_skill_level: "beginner" | "intermediate" | "advanced"
+  preferred_meal_prep_time: number | null
+}
+
+interface OnboardingFormData {
+  preferences: UserPreferences
+}
+
+const OnboardingPage: React.FC = () => {
+  const [currentStep, setCurrentStep] = useState<number>(1)
+  const [loading, setLoading] = useState<boolean>(false)
+  const [error, setError] = useState<string>("")
+  const [success, setSuccess] = useState<boolean>(false)
+
+  const navigate = useNavigate()
+  const dispatch = useAppDispatch()
+  const user = useAppSelector((state) => state.user.user)
+
+  const [formData, setFormData] = useState<OnboardingFormData>({
+    preferences: {
+      dietary_restrictions: [],
+      allergies: [],
+      favorite_cuisines: [],
+      disliked_ingredients: [],
+      cooking_skill_level: "beginner",
+      preferred_meal_prep_time: null,
+    },
+  })
+
+  const totalSteps = 4
+
+  const handleInputChange = (field: string, value: any) => {
+    const prefField = field.replace("preferences.", "")
+    setFormData((prev) => ({
+      ...prev,
+      preferences: {
+        ...prev.preferences,
+        [prefField]: value,
+      },
+    }))
+  }
+
+  const handleArrayAdd = (field: string, value: string) => {
+    if (!value.trim()) return
+    const prefField = field.replace("preferences.", "")
+    setFormData((prev) => ({
+      ...prev,
+      preferences: {
+        ...prev.preferences,
+        [prefField]: [...(prev.preferences[prefField as keyof UserPreferences] as string[]), value.trim()],
+      },
+    }))
+  }
+
+  const handleArrayRemove = (field: string, index: number) => {
+    const prefField = field.replace("preferences.", "")
+    setFormData((prev) => ({
+      ...prev,
+      preferences: {
+        ...prev.preferences,
+        [prefField]: (prev.preferences[prefField as keyof UserPreferences] as string[]).filter((_, i) => i !== index),
+      },
+    }))
+  }
+
+  const handleSave = async () => {
+    try {
+      setLoading(true)
+      setError("")
+
+      const response = await fetch(`http://localhost:8000/api/v1/user/update`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+        },
+        body: JSON.stringify({
+          user_id: user?.id,
+          preferences: formData.preferences,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.detail || "Failed to update profile")
+      }
+
+      setSuccess(true)
+      setTimeout(() => {
+        navigate("/dashboard")
+      }, 1500)
+    } catch (error) {
+      console.error("Failed to update profile:", error)
+      setError(error instanceof Error ? error.message : "Failed to update profile. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSkip = () => {
+    navigate("/dashboard")
+  }
+
+  const handleNext = () => {
+    if (currentStep < totalSteps) {
+      setCurrentStep(currentStep + 1)
+    }
+  }
+
+  const handlePrevious = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1)
+    }
+  }
+
+  const skillLevels = [
+    {
+      value: "beginner",
+      label: "Beginner",
+      description: "Just starting out, learning the basics",
+      icon: <Clock size={24} />,
+    },
+    {
+      value: "intermediate",
+      label: "Intermediate",
+      description: "Some cooking experience, comfortable with recipes",
+      icon: <Utensils size={24} />,
+    },
+    {
+      value: "advanced",
+      label: "Advanced",
+      description: "Experienced cook, comfortable experimenting",
+      icon: <ChefHat size={24} />,
+    },
+  ]
+
+  const commonDietaryRestrictions = [
+    "Vegetarian",
+    "Vegan",
+    "Gluten-Free",
+    "Dairy-Free",
+    "Keto",
+    "Paleo",
+    "Low-Carb",
+    "Halal",
+    "Kosher",
+    "Low-Sodium",
+  ]
+
+  const commonAllergies = [
+    "Nuts",
+    "Peanuts",
+    "Shellfish",
+    "Fish",
+    "Eggs",
+    "Dairy",
+    "Soy",
+    "Wheat",
+    "Sesame",
+    "Sulfites",
+  ]
+
+  const commonCuisines = [
+    "Italian",
+    "Mexican",
+    "Chinese",
+    "Japanese",
+    "Indian",
+    "Thai",
+    "French",
+    "Mediterranean",
+    "American",
+    "Korean",
+    "Greek",
+    "Spanish",
+  ]
+
+  const prepTimes = [
+    { value: 15, label: "15 minutes", description: "Quick meals" },
+    { value: 30, label: "30 minutes", description: "Standard cooking time" },
+    { value: 45, label: "45 minutes", description: "More involved recipes" },
+    { value: 60, label: "1 hour", description: "Complex dishes" },
+    { value: 90, label: "1.5 hours", description: "Special occasion cooking" },
+  ]
+
+  if (success) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+        <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8 max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Check className="w-8 h-8 text-green-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-4">Welcome to Food AI!</h2>
+          <p className="text-gray-300 mb-6">Your preferences have been saved. Let's start cooking!</p>
+          <div className="flex items-center justify-center">
+            <div className="w-6 h-6 border-2 border-green-400 border-t-transparent rounded-full animate-spin"></div>
+            <span className="ml-2 text-gray-400">Redirecting to dashboard...</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 opacity-10 pointer-events-none">
+        <div className="absolute top-20 left-20 w-72 h-72 bg-[#3A2F5F] rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+        <div className="absolute top-40 right-20 w-72 h-72 bg-[#4A406F] rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-80 w-72 h-72 bg-[#5A517F] rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
+      </div>
+
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-2xl">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center mb-6">
+              <div className="relative">
+                <ChefHat className="w-12 h-12 text-green-400" />
+                <Sparkles className="w-6 h-6 text-green-300 absolute -top-1 -right-1 animate-pulse" />
+              </div>
+            </div>
+            <h1 className="text-3xl font-bold text-white mb-2">Welcome to Food AI!</h1>
+            <p className="text-gray-300">Let's personalize your cooking experience</p>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-gray-400">
+                Step {currentStep} of {totalSteps}
+              </span>
+              <span className="text-sm text-gray-400">{Math.round((currentStep / totalSteps) * 100)}% complete</span>
+            </div>
+            <div className="w-full bg-slate-700/50 rounded-full h-2">
+              <div
+                className="bg-gradient-to-r from-green-500 to-emerald-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+              ></div>
+            </div>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 bg-red-500/20 border border-red-500/30 rounded-xl p-4 flex items-center gap-3">
+              <AlertCircle className="text-red-400" size={20} />
+              <span className="text-red-300">{error}</span>
+              <button onClick={() => setError("")} className="ml-auto text-red-400 hover:text-red-300">
+                <X size={16} />
+              </button>
+            </div>
+          )}
+
+          {/* Main Content */}
+          <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8">
+            {/* Step 1: Cooking Skill Level */}
+            {currentStep === 1 && (
+              <div>
+                <h2 className="text-2xl font-bold mb-2">What's your cooking skill level?</h2>
+                <p className="text-gray-400 mb-6">This helps us suggest recipes that match your experience</p>
+
+                <div className="grid grid-cols-1 gap-4">
+                  {skillLevels.map((level) => (
+                    <button
+                      key={level.value}
+                      onClick={() => handleInputChange("preferences.cooking_skill_level", level.value)}
+                      className={`p-6 rounded-xl border transition-all duration-200 text-left ${
+                        formData.preferences.cooking_skill_level === level.value
+                          ? "border-green-500 bg-green-500/20 scale-105"
+                          : "border-slate-600 bg-slate-700/30 hover:border-slate-500 hover:bg-slate-700/50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div
+                          className={`p-3 rounded-lg ${
+                            formData.preferences.cooking_skill_level === level.value
+                              ? "bg-green-500/30 text-green-400"
+                              : "bg-slate-600/50 text-gray-400"
+                          }`}
+                        >
+                          {level.icon}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-lg">{level.label}</div>
+                          <div className="text-gray-400 text-sm">{level.description}</div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Preferred Meal Prep Time */}
+            {currentStep === 2 && (
+              <div>
+                <h2 className="text-2xl font-bold mb-2">How much time do you usually have for cooking?</h2>
+                <p className="text-gray-400 mb-6">We'll prioritize recipes that fit your schedule</p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {prepTimes.map((time) => (
+                    <button
+                      key={time.value}
+                      onClick={() => handleInputChange("preferences.preferred_meal_prep_time", time.value)}
+                      className={`p-4 rounded-xl border transition-all duration-200 text-left ${
+                        formData.preferences.preferred_meal_prep_time === time.value
+                          ? "border-green-500 bg-green-500/20 scale-105"
+                          : "border-slate-600 bg-slate-700/30 hover:border-slate-500 hover:bg-slate-700/50"
+                      }`}
+                    >
+                      <div className="font-semibold">{time.label}</div>
+                      <div className="text-gray-400 text-sm">{time.description}</div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-6">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Or enter a custom time (minutes)
+                  </label>
+                  <input
+                    type="number"
+                    value={
+                      prepTimes.find((t) => t.value === formData.preferences.preferred_meal_prep_time)
+                        ? ""
+                        : formData.preferences.preferred_meal_prep_time || ""
+                    }
+                    onChange={(e) =>
+                      handleInputChange("preferences.preferred_meal_prep_time", Number.parseInt(e.target.value) || null)
+                    }
+                    placeholder="e.g., 25"
+                    className="w-full bg-slate-900/50 text-white border border-slate-600/50 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-green-500/50"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Dietary Restrictions & Allergies */}
+            {currentStep === 3 && (
+              <div>
+                <h2 className="text-2xl font-bold mb-2">Any dietary restrictions or allergies?</h2>
+                <p className="text-gray-400 mb-6">We'll make sure to avoid ingredients that don't work for you</p>
+
+                <div className="space-y-6">
+                  <MultiSelectField
+                    label="Dietary Restrictions"
+                    description="Select any that apply to you"
+                    values={formData.preferences.dietary_restrictions}
+                    options={commonDietaryRestrictions}
+                    onAdd={(value) => handleArrayAdd("preferences.dietary_restrictions", value)}
+                    onRemove={(index) => handleArrayRemove("preferences.dietary_restrictions", index)}
+                    icon={<Heart size={16} />}
+                  />
+
+                  <MultiSelectField
+                    label="Allergies"
+                    description="Important for your safety"
+                    values={formData.preferences.allergies}
+                    options={commonAllergies}
+                    onAdd={(value) => handleArrayAdd("preferences.allergies", value)}
+                    onRemove={(index) => handleArrayRemove("preferences.allergies", index)}
+                    icon={<AlertCircle size={16} />}
+                    variant="warning"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Favorite Cuisines */}
+            {currentStep === 4 && (
+              <div>
+                <h2 className="text-2xl font-bold mb-2">What cuisines do you love?</h2>
+                <p className="text-gray-400 mb-6">We'll suggest more recipes from your favorite cuisines</p>
+
+                <MultiSelectField
+                  label="Favorite Cuisines"
+                  description="Select as many as you like"
+                  values={formData.preferences.favorite_cuisines}
+                  options={commonCuisines}
+                  onAdd={(value) => handleArrayAdd("preferences.favorite_cuisines", value)}
+                  onRemove={(index) => handleArrayRemove("preferences.favorite_cuisines", index)}
+                  icon={<ChefHat size={16} />}
+                />
+              </div>
+            )}
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between items-center mt-8 pt-6 border-t border-slate-700/50">
+              <div className="flex gap-3">
+                {currentStep > 1 && (
+                  <button
+                    onClick={handlePrevious}
+                    className="px-4 py-2 bg-slate-700/50 hover:bg-slate-700/70 text-white rounded-lg transition-colors"
+                  >
+                    Previous
+                  </button>
+                )}
+                <button
+                  onClick={handleSkip}
+                  className="px-4 py-2 text-gray-400 hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <Skip size={16} />
+                  Skip for now
+                </button>
+              </div>
+
+              <div className="flex gap-3">
+                {currentStep < totalSteps ? (
+                  <button
+                    onClick={handleNext}
+                    className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center gap-2"
+                  >
+                    Next
+                    <ArrowRight size={16} />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleSave}
+                    disabled={loading}
+                    className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save size={16} />
+                        Save & Continue
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Multi-Select Field Component
+interface MultiSelectFieldProps {
+  label: string
+  description: string
+  values: string[]
+  options: string[]
+  onAdd: (value: string) => void
+  onRemove: (index: number) => void
+  icon: React.ReactNode
+  variant?: "default" | "warning"
+}
+
+const MultiSelectField: React.FC<MultiSelectFieldProps> = ({
+  label,
+  description,
+  values,
+  options,
+  onAdd,
+  onRemove,
+  icon,
+  variant = "default",
+}) => {
+  const [showAll, setShowAll] = useState(false)
+  const displayOptions = showAll ? options : options.slice(0, 8)
+
+  const colorClasses = {
+    default: {
+      selected: "bg-green-500/20 text-green-400 border-green-500/30",
+      unselected: "bg-slate-700/30 text-gray-300 border-slate-600/50 hover:border-slate-500",
+      icon: "text-green-400",
+    },
+    warning: {
+      selected: "bg-red-500/20 text-red-400 border-red-500/30",
+      unselected: "bg-slate-700/30 text-gray-300 border-slate-600/50 hover:border-slate-500",
+      icon: "text-red-400",
+    },
+  }
+
+  const colors = colorClasses[variant]
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <span className={colors.icon}>{icon}</span>
+        <h3 className="text-lg font-semibold">{label}</h3>
+      </div>
+      <p className="text-gray-400 text-sm mb-4">{description}</p>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        {displayOptions.map((option) => {
+          const isSelected = values.includes(option)
+          return (
+            <button
+              key={option}
+              onClick={() => (isSelected ? onRemove(values.indexOf(option)) : onAdd(option))}
+              className={`p-3 rounded-lg border transition-all duration-200 text-sm ${
+                isSelected ? colors.selected : colors.unselected
+              }`}
+            >
+              {option}
+            </button>
+          )
+        })}
+      </div>
+
+      {options.length > 8 && (
+        <button onClick={() => setShowAll(!showAll)} className="mt-3 text-green-400 hover:text-green-300 text-sm">
+          {showAll ? "Show less" : `Show ${options.length - 8} more`}
+        </button>
+      )}
+
+      {values.length > 0 && (
+        <div className="mt-4 p-3 bg-slate-700/20 rounded-lg">
+          <p className="text-sm text-gray-400 mb-2">Selected ({values.length}):</p>
+          <div className="flex flex-wrap gap-2">
+            {values.map((value, index) => (
+              <span
+                key={index}
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${colors.selected}`}
+              >
+                {value}
+                <button onClick={() => onRemove(index)} className="hover:opacity-70">
+                  <X size={12} />
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default OnboardingPage

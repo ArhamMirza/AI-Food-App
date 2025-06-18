@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, BackgroundTasks
+from fastapi import APIRouter, Depends, BackgroundTasks, Body
 from typing import Dict, Any, List
 from datetime import datetime
 from fastapi import HTTPException, status
@@ -7,6 +7,7 @@ from app.models.recipe import RecipeSearchRequest, RecipeSearchResponse, RecipeR
 from app.schemas.recipe_schema import RecipeSchema
 from app.services.recipe_service import handle_recipe_function_call
 from app.config import settings
+from app.core.auth import get_token_payload
 
 router = APIRouter()
 
@@ -21,7 +22,10 @@ def document_to_recipe_response(doc: Dict[str, Any]) -> RecipeResponse:
     )
 
 @router.post("/search", response_model=RecipeSearchResponse)
-async def search_recipes(request: RecipeSearchRequest):
+async def search_recipes(
+    request: RecipeSearchRequest,     
+    token_payload: dict = Depends(get_token_payload)
+):
     """
     Search for recipes based on query and optional filters.
     
@@ -62,7 +66,10 @@ async def search_recipes(request: RecipeSearchRequest):
         )
 
 @router.get("/user/{user_id}", response_model=RecipeListResponse)
-async def get_recipes_by_user(user_id: str):
+async def get_recipes_by_user(
+    user_id: str,     
+    token_payload: dict = Depends(get_token_payload)
+):
     """
     Get all recipes for a given user.
 
@@ -85,7 +92,10 @@ async def get_recipes_by_user(user_id: str):
             detail=f"Internal server error: {str(e)}"
         )
 @router.get("/{recipe_id}", response_model=RecipeSearchResponse)
-async def get_recipe_by_id(recipe_id: str):
+async def get_recipe_by_id(
+    recipe_id: str,  
+    token_payload: dict = Depends(get_token_payload)
+):
     """
     Get a specific recipe by its ID.
 
@@ -117,10 +127,13 @@ async def get_recipe_by_id(recipe_id: str):
             detail=f"Internal server error: {str(e)}"
         )
     
-from fastapi import Body
 
 @router.put("/{recipe_id}", response_model=RecipeSearchResponse)
-async def update_recipe(recipe_id: str, body: Dict[str, Any] = Body(...)):
+async def update_recipe(
+    recipe_id: str,
+    token_payload: dict = Depends(get_token_payload),
+    body: Dict[str, Any] = Body(...)
+ ):
     """
     Update a recipe's title and content by its ID.
 

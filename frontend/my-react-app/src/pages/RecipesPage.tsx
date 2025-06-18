@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { useAppSelector } from "../redux/hooks"
 
 import { useState, useEffect, useRef } from "react"
 import {
@@ -59,7 +60,8 @@ const RecipesPage: React.FC = () => {
 
   const API_BASE_URL = "http://localhost:8000/api/v1"
   const RECIPE_URL = `${API_BASE_URL}/recipe`
-  const USER_ID = "683ac8b1dcd4216109341d9f" // This would normally come from auth context
+  const user:any = useAppSelector((state) => state.user.user)
+  const USER_ID = user.id
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY)
@@ -73,103 +75,120 @@ const RecipesPage: React.FC = () => {
 
   const fetchUserRecipes = async () => {
     try {
-      setLoading(true)
-      const response = await fetch(`${RECIPE_URL}/user/${USER_ID}`)
-      if (!response.ok) throw new Error(`API call failed: ${response.status}`)
-      const data = await response.json()
-      setRecipes(Array.isArray(data.data) ? data.data : [])
+      setLoading(true);
+
+      const accessToken = localStorage.getItem("access_token"); // or from memory/sessionStorage
+
+      const response = await fetch(`${RECIPE_URL}/user/${USER_ID}`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) throw new Error(`API call failed: ${response.status}`);
+
+      const data = await response.json();
+      setRecipes(Array.isArray(data.data) ? data.data : []);
     } catch (error) {
-      console.error("Failed to load recipes:", error)
+      console.error("Failed to load recipes:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
+
 
   const handleCreateRecipe = async () => {
-    if (!newRecipeTitle.trim() || !newRecipeContent.trim()) return
+    if (!newRecipeTitle.trim() || !newRecipeContent.trim()) return;
 
     try {
-      setLoading(true)
+      setLoading(true);
+      const accessToken = localStorage.getItem("access_token");
+
       const response = await fetch(RECIPE_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           user_id: USER_ID,
           title: newRecipeTitle.trim(),
           content: newRecipeContent.trim(),
         }),
-      })
+      });
 
-      if (!response.ok) throw new Error(`API call failed: ${response.status}`)
+      if (!response.ok) throw new Error(`API call failed: ${response.status}`);
 
-      // Refresh recipes list
-      await fetchUserRecipes()
-
-      // Reset form and exit create mode
-      setNewRecipeTitle("")
-      setNewRecipeContent("")
-      setIsCreating(false)
+      await fetchUserRecipes();
+      setNewRecipeTitle("");
+      setNewRecipeContent("");
+      setIsCreating(false);
     } catch (error) {
-      console.error("Failed to create recipe:", error)
+      console.error("Failed to create recipe:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleUpdateRecipe = async () => {
-    if (!currentRecipe || !newRecipeTitle.trim() || !newRecipeContent.trim()) return
+    if (!currentRecipe || !newRecipeTitle.trim() || !newRecipeContent.trim()) return;
 
     try {
-      setLoading(true)
+      setLoading(true);
+      const accessToken = localStorage.getItem("access_token");
+
       const response = await fetch(`${RECIPE_URL}/${currentRecipe.recipe_id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           title: newRecipeTitle.trim(),
           content: newRecipeContent.trim(),
         }),
-      })
+      });
 
-      if (!response.ok) throw new Error(`API call failed: ${response.status}`)
+      if (!response.ok) throw new Error(`API call failed: ${response.status}`);
 
-      // Refresh recipes list
-      await fetchUserRecipes()
-
-      // Reset form and exit edit mode
-      setNewRecipeTitle("")
-      setNewRecipeContent("")
-      setCurrentRecipe(null)
-      setIsEditing(false)
+      await fetchUserRecipes();
+      setNewRecipeTitle("");
+      setNewRecipeContent("");
+      setCurrentRecipe(null);
+      setIsEditing(false);
     } catch (error) {
-      console.error("Failed to update recipe:", error)
+      console.error("Failed to update recipe:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
-
+  };
   const handleDeleteRecipe = async (recipeId: string) => {
-    if (!window.confirm("Are you sure you want to delete this recipe?")) return
+    if (!window.confirm("Are you sure you want to delete this recipe?")) return;
 
     try {
-      setLoading(true)
+      setLoading(true);
+      const accessToken = localStorage.getItem("access_token");
+
       const response = await fetch(`${RECIPE_URL}/${recipeId}`, {
         method: "DELETE",
-      })
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
 
-      if (!response.ok) throw new Error(`API call failed: ${response.status}`)
+      if (!response.ok) throw new Error(`API call failed: ${response.status}`);
 
-      // Refresh recipes list
-      await fetchUserRecipes()
+      await fetchUserRecipes();
     } catch (error) {
-      console.error("Failed to delete recipe:", error)
+      console.error("Failed to delete recipe:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
+
+
+
 
   const handleEditRecipe = (recipe: Recipe) => {
     setCurrentRecipe(recipe)

@@ -1,6 +1,9 @@
 "use client"
 
 import type React from "react"
+import { useAppSelector } from "../redux/hooks"
+import { authorizedFetch } from "../utils/auth" // adjust path as needed
+
 
 import { useState, useEffect, useRef } from "react"
 import {
@@ -86,7 +89,8 @@ const MealPlanPage: React.FC = () => {
   const API_BASE_URL = "http://localhost:8000/api/v1"
   const RECIPE_URL = `${API_BASE_URL}/recipe`
   const MEAL_PLAN_URL = `${API_BASE_URL}/meal-plan`
-  const USER_ID = "683ac8b1dcd4216109341d9f" // This would normally come from auth context
+  const user:any = useAppSelector((state) => state.user.user)
+  const USER_ID = user.id
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY)
@@ -105,116 +109,122 @@ const MealPlanPage: React.FC = () => {
     setCurrentMonth(new Date(date.getFullYear(), date.getMonth(), 1))
   }, [selectedDate])
 
-  const fetchUserRecipes = async () => {
+    const fetchUserRecipes = async () => {
     try {
-      setError("")
-      const response = await fetch(`${RECIPE_URL}/user/${USER_ID}`)
-      if (!response.ok) throw new Error(`Failed to fetch recipes: ${response.status}`)
-      const data: ApiResponse<Recipe[]> = await response.json()
-      setRecipes(data.data || [])
+        setError("")
+
+        const response = await authorizedFetch(`${RECIPE_URL}/user/${USER_ID}`)
+        if (!response.ok) throw new Error(`Failed to fetch recipes: ${response.status}`)
+
+        const data: ApiResponse<Recipe[]> = await response.json()
+        setRecipes(data.data || [])
     } catch (error) {
-      console.error("Failed to load recipes:", error)
-      setError("Failed to load recipes")
+        console.error("Failed to load recipes:", error)
+        setError("Failed to load recipes")
     }
-  }
+    }
+
+
 
   const fetchMealPlans = async () => {
     try {
-      setLoading(true)
-      setError("")
-      const response = await fetch(`${MEAL_PLAN_URL}/user/${USER_ID}`)
-      if (!response.ok) throw new Error(`Failed to fetch meal plans: ${response.status}`)
-      const data: ApiResponse<MealPlan[]> = await response.json()
-      setMealPlans(data.data || [])
+        setLoading(true)
+        setError("")
+
+        const response = await authorizedFetch(`${MEAL_PLAN_URL}/user/${USER_ID}`)
+
+        if (!response.ok) throw new Error(`Failed to fetch meal plans: ${response.status}`)
+
+        const data: ApiResponse<MealPlan[]> = await response.json()
+        setMealPlans(data.data || [])
     } catch (error) {
-      console.error("Failed to load meal plans:", error)
-      setError("Failed to load meal plans")
+        console.error("Failed to load meal plans:", error)
+        setError("Failed to load meal plans")
     } finally {
-      setLoading(false)
+        setLoading(false)
     }
-  }
+    }
 
-  const handleSaveMealPlan = async (mealPlanData: Partial<MealPlan>) => {
+    const handleSaveMealPlan = async (mealPlanData: Partial<MealPlan>) => {
     try {
-      setLoading(true)
-      setError("")
+        setLoading(true)
+        setError("")
 
-      const payload = {
+        const payload = {
         user_id: USER_ID,
         date: selectedDate,
         meal_type: selectedMealType,
         recipe_id: mealPlanData.recipe_id,
         recipe_title: mealPlanData.recipe_title,
         notes: mealPlanData.notes || "",
-      }
+        }
 
-      let response: Response
-      if (selectedMealPlan) {
+        let response: Response
+        if (selectedMealPlan) {
         // Update existing meal plan
-        response = await fetch(`${MEAL_PLAN_URL}/${selectedMealPlan.meal_plan_id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
+        response = await authorizedFetch(`${MEAL_PLAN_URL}/${selectedMealPlan.meal_plan_id}`, {
+            method: "PUT",
+            body: JSON.stringify(payload),
         })
-      } else {
+        } else {
         // Create new meal plan
-        response = await fetch(`${MEAL_PLAN_URL}/`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
+        response = await authorizedFetch(`${MEAL_PLAN_URL}/`, {
+            method: "POST",
+            body: JSON.stringify(payload),
         })
-      }
+        }
 
-      if (!response.ok) {
+        if (!response.ok) {
         throw new Error(`Failed to save meal plan: ${response.status}`)
-      }
+        }
 
-      const data: ApiResponse<MealPlan> = await response.json()
+        const data: ApiResponse<MealPlan> = await response.json()
 
-      // Update the meal plans state
-      if (selectedMealPlan) {
-        setMealPlans((prev) => prev.map((mp) => (mp.meal_plan_id === selectedMealPlan.meal_plan_id ? data.data : mp)))
-      } else {
+        if (selectedMealPlan) {
+        setMealPlans((prev) =>
+            prev.map((mp) =>
+            mp.meal_plan_id === selectedMealPlan.meal_plan_id ? data.data : mp
+            )
+        )
+        } else {
         setMealPlans((prev) => [...prev, data.data])
-      }
+        }
 
-      // Close the modal
-      setShowMealPlanModal(false)
-      setSelectedMealPlan(undefined)
+        setShowMealPlanModal(false)
+        setSelectedMealPlan(undefined)
     } catch (error) {
-      console.error("Failed to save meal plan:", error)
-      setError("Failed to save meal plan")
+        console.error("Failed to save meal plan:", error)
+        setError("Failed to save meal plan")
     } finally {
-      setLoading(false)
+        setLoading(false)
     }
-  }
+    }
 
   const handleDeleteMealPlan = async (mealPlanId: string) => {
     if (!window.confirm("Are you sure you want to delete this meal plan?")) return
 
     try {
-      setLoading(true)
-      setError("")
-      const response = await fetch(`${MEAL_PLAN_URL}/${mealPlanId}`, {
+        setLoading(true)
+        setError("")
+
+        const response = await authorizedFetch(`${MEAL_PLAN_URL}/${mealPlanId}`, {
         method: "DELETE",
-      })
+        })
 
-      if (!response.ok) {
+        if (!response.ok) {
         throw new Error(`Failed to delete meal plan: ${response.status}`)
-      }
+        }
 
-      setMealPlans((prev) => prev.filter((mp) => mp.meal_plan_id !== mealPlanId))
+        setMealPlans((prev) => prev.filter((mp) => mp.meal_plan_id !== mealPlanId))
     } catch (error) {
-      console.error("Failed to delete meal plan:", error)
-      setError("Failed to delete meal plan")
+        console.error("Failed to delete meal plan:", error)
+        setError("Failed to delete meal plan")
     } finally {
-      setLoading(false)
+        setLoading(false)
     }
-  }
+    }
+
+
 
   const handleAddMeal = (date: string, mealType: "breakfast" | "lunch" | "dinner" | "snack") => {
     setSelectedDate(date)

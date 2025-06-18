@@ -27,6 +27,7 @@ def create_refresh_token(data: dict):
 
 def verify_token(token: str) -> Optional[dict]:
     try:
+        print(token)
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         return payload
     except JWTError:

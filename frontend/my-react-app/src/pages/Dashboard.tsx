@@ -20,8 +20,12 @@ import {
   Clock,
   Coffee,
   Soup,
+  User
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
+import { useAppSelector } from "../redux/hooks"
+import { authorizedFetch } from "../utils/auth" // adjust path as needed
+
 
 interface NavItem {
   icon: React.ReactNode
@@ -71,21 +75,13 @@ const Dashboard: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>("")
   const navigate = useNavigate()
 
+  const user:any = useAppSelector((state) => state.user.user)
+
   const API_BASE_URL = "http://localhost:8000/api/v1"
   const RECIPE_URL = `${API_BASE_URL}/recipe`
   const MEAL_PLAN_URL = `${API_BASE_URL}/meal-plan`
-  const USER_ID = "683ac8b1dcd4216109341d9f" // This would normally come from auth context
-
-  // In the fetchUserRecipes function, add a state for user data
-  const [userData, setUserData] = useState<{
-    username: string
-    hasRecipes: boolean
-    hasChats: boolean
-  }>({
-    username: "User",
-    hasRecipes: false,
-    hasChats: false,
-  })
+  const USER_ID = user.id // This would normally come from auth context
+  console.log(user)
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY)
@@ -93,56 +89,40 @@ const Dashboard: React.FC = () => {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  // Update the useEffect to call both functions
   useEffect(() => {
     fetchUserRecipes()
-    fetchUserChatData()
     fetchMealPlans()
   }, [])
 
-  // Update the fetchUserRecipes function to also set user data
   const fetchUserRecipes = async () => {
     try {
-      setLoading(true)
-      const response = await fetch(`${RECIPE_URL}/user/${USER_ID}`)
-      if (!response.ok) throw new Error(`API call failed: ${response.status}`)
-      const data: ApiResponse<Recipe[]> = await response.json()
-      const fetchedRecipes = Array.isArray(data.data) ? data.data : []
-      setRecipes(fetchedRecipes)
+      setLoading(true);
 
-      // Update user data based on recipes
-      setUserData((prev) => ({
-        ...prev,
-        hasRecipes: fetchedRecipes.length > 0,
-        username: "Chef", // You can update this when you have user data from API
-      }))
+      const response = await authorizedFetch(`${RECIPE_URL}/user/${USER_ID}`);
+
+      if (!response.ok) throw new Error(`API call failed: ${response.status}`);
+
+      const data: ApiResponse<Recipe[]> = await response.json();
+      const fetchedRecipes = Array.isArray(data.data) ? data.data : [];
+      setRecipes(fetchedRecipes);
+
     } catch (error) {
-      console.error("Failed to load recipes:", error)
+      console.error("Failed to load recipes:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  // Add a function to fetch user chat data
-  const fetchUserChatData = async () => {
-    try {
-      // This would be replaced with an actual API call
-      // For now, we'll simulate it
-      const hasChats = Math.random() > 0.5 // Randomly determine if user has chats
 
-      setUserData((prev) => ({
-        ...prev,
-        hasChats,
-      }))
-    } catch (error) {
-      console.error("Failed to load chat data:", error)
-    }
-  }
 
   const fetchMealPlans = async () => {
     try {
-      const response = await fetch(`${MEAL_PLAN_URL}/user/${USER_ID}`)
-      if (!response.ok) throw new Error(`Failed to fetch meal plans: ${response.status}`)
+      const response = await authorizedFetch(`${MEAL_PLAN_URL}/user/${USER_ID}`)
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch meal plans: ${response.status}`)
+      }
+
       const data: ApiResponse<MealPlan[]> = await response.json()
       setMealPlans(data.data || [])
     } catch (error) {
@@ -150,6 +130,7 @@ const Dashboard: React.FC = () => {
       setMealPlans([])
     }
   }
+
 
   const handleLogout = () => {
     localStorage.removeItem("access_token")
@@ -403,9 +384,13 @@ const Dashboard: React.FC = () => {
                 >
                   <MessageSquare size={20} />
                 </button>
-                <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
-                  <ChefHat size={20} className="text-white" />
-                </div>
+                <button
+                  onClick={() => navigate("/profile")}
+                  className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center hover:scale-105 transition-transform cursor-pointer"
+                  title="View Profile"
+                >
+                  <User size={20} className="text-white" />
+                </button>
               </div>
             </div>
           </div>
@@ -417,7 +402,7 @@ const Dashboard: React.FC = () => {
           <section className="mb-10">
             <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6 md:p-8">
               <h1 className="text-3xl md:text-4xl font-bold mb-4">
-                Welcome, <span className="text-green-400">{userData.username}</span>
+                Welcome, <span className="text-green-400">{user?.username || "Chef"}</span>
               </h1>
               <p className="text-lg text-gray-300 max-w-3xl">
                 Explore personalized recipes, plan your meals with our AI cooking assistant to elevate your cooking
@@ -428,9 +413,9 @@ const Dashboard: React.FC = () => {
                   onClick={() => navigate("/chat")}
                   className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center gap-2"
                 >
-                  <Bot size={18} /> {userData.hasChats ? "Continue Chatting" : "Start Chatting"}
+                  <Bot size={18} /> Start Chatting
                 </button>
-                {userData.hasRecipes && (
+                {recipes.length > 0 && (
                   <button
                     onClick={() => navigate("/recipes")}
                     className="bg-slate-700/50 hover:bg-slate-700/70 text-white px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center gap-2"
@@ -471,7 +456,7 @@ const Dashboard: React.FC = () => {
                 {recipes.map((recipe) => (
                   <div
                     key={recipe.recipe_id}
-                    onClick={() => navigate(`/recipe/${recipe.recipe_id}`)}
+                    onClick={() => navigate(`/recipes/${recipe.recipe_id}`)}
                     className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:bg-slate-800/50 transition-all duration-300 cursor-pointer group"
                   >
                     <div className="flex items-start gap-3">

@@ -27,8 +27,9 @@ import Notification from "../components/chat/Notification"
 import useNotifications from "../components/chat/useNotifications"
 import type { Message, Conversation, Recipe } from "../components/chat/types"
 import React from "react"
+import { useAppSelector } from "../redux/hooks"
 
-const USER_ID = "683ac8b1dcd4216109341d9f"
+
 const BASE_URL = "http://localhost:8000/api/v1/chatbot/chat"
 const RECIPE_URL = "http://localhost:8000/api/v1/recipe"
 
@@ -55,6 +56,10 @@ const ChatPage = () => {
   const [error, setError] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
+  const user:any = useAppSelector((state) => state.user.user)
+
+  const USER_ID = user.id
 
   // Modal states
   const [showNewChatModal, setShowNewChatModal] = useState(false)
@@ -89,24 +94,34 @@ const ChatPage = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // API functions - Chat API
-  const apiCall = async (endpoint: string, options?: RequestInit) => {
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
-      headers: { "Content-Type": "application/json" },
-      ...options,
-    })
-    if (!response.ok) throw new Error(`API call failed: ${response.status}`)
-    return response.json()
-  }
+  const apiCall = async (endpoint: string, options: RequestInit = {}) => {
+  const token = localStorage.getItem("access_token");
+  const response = await fetch(`${BASE_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: token ? `Bearer ${token}` : "",
+      ...(options.headers || {}),
+    },
+  });
+  if (!response.ok) throw new Error(`API call failed: ${response.status}`);
+  return response.json();
+};
 
-  // API functions - Recipe API
-  const recipeApiCall = async (endpoint: string, options?: RequestInit) => {
+  const recipeApiCall = async (endpoint: string, options: RequestInit = {}) => {
+    const token = localStorage.getItem("access_token");
     const response = await fetch(`${RECIPE_URL}${endpoint}`, {
-      headers: { "Content-Type": "application/json" },
       ...options,
-    })
-    if (!response.ok) throw new Error(`Recipe API call failed: ${response.status}`)
-    return response.json()
-  }
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
+        ...(options.headers || {}),
+      },
+    });
+    if (!response.ok) throw new Error(`Recipe API call failed: ${response.status}`);
+    return response.json();
+  };
+
 
   const fetchUserConversations = async () => {
     try {
