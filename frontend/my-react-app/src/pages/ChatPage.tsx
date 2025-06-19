@@ -28,6 +28,7 @@ import useNotifications from "../components/chat/useNotifications"
 import type { Message, Conversation, Recipe } from "../components/chat/types"
 import React from "react"
 import { useAppSelector } from "../redux/hooks"
+import { authorizedFetch } from "../utils/auth"
 
 
 const BASE_URL = "http://localhost:8000/api/v1/chatbot/chat"
@@ -58,6 +59,8 @@ const ChatPage = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   const user:any = useAppSelector((state) => state.user.user)
+  const preferences = useAppSelector((state) => state.user.user?.preferences)
+
 
   const USER_ID = user.id
 
@@ -94,33 +97,20 @@ const ChatPage = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // API functions - Chat API
-  const apiCall = async (endpoint: string, options: RequestInit = {}) => {
-  const token = localStorage.getItem("access_token");
-  const response = await fetch(`${BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: token ? `Bearer ${token}` : "",
-      ...(options.headers || {}),
-    },
-  });
-  if (!response.ok) throw new Error(`API call failed: ${response.status}`);
-  return response.json();
-};
+  // utils/apiCall.ts
 
-  const recipeApiCall = async (endpoint: string, options: RequestInit = {}) => {
-    const token = localStorage.getItem("access_token");
-    const response = await fetch(`${RECIPE_URL}${endpoint}`, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token ? `Bearer ${token}` : "",
-        ...(options.headers || {}),
-      },
-    });
-    if (!response.ok) throw new Error(`Recipe API call failed: ${response.status}`);
-    return response.json();
-  };
+const apiCall = async (endpoint: string, options: RequestInit = {}) => {
+  const response = await authorizedFetch(`${BASE_URL}${endpoint}`, options)
+  if (!response.ok) throw new Error(`API call failed: ${response.status}`)
+  return response.json()
+}
+
+ const recipeApiCall = async (endpoint: string, options: RequestInit = {}) => {
+  const response = await authorizedFetch(`${RECIPE_URL}${endpoint}`, options)
+  if (!response.ok) throw new Error(`Recipe API call failed: ${response.status}`)
+  return response.json()
+}
+
 
 
   const fetchUserConversations = async () => {
@@ -188,7 +178,20 @@ const ChatPage = () => {
   const sendMessage = async () => {
     if (!input.trim() || !selectedConversation) return
 
-    const userMessage = { role: "user", content: input }
+    const preferencesText = `
+      User Preferences:
+      - Dietary Restrictions: ${preferences?.dietary_restrictions?.join(", ") || "None"}
+      - Allergies: ${preferences?.allergies?.join(", ") || "None"}
+      - Favorite Cuisines: ${preferences?.favorite_cuisines?.join(", ") || "None"}
+      - Disliked Ingredients: ${preferences?.disliked_ingredients?.join(", ") || "None"}
+      - Cooking Skill Level: ${preferences?.cooking_skill_level || "Unknown"}
+      - Preferred Meal Prep Time: ${preferences?.preferred_meal_prep_time ? preferences.preferred_meal_prep_time + " minutes" : "Any"}
+      `.trim()
+
+    const fullMessage = `${input.trim()}\n\n${preferencesText}`
+    console.log(fullMessage)
+
+    const userMessage = { role: "user", content: fullMessage }
     setMessages((prev) => [...prev, userMessage])
     setInput("")
     setLoading(true)
@@ -203,10 +206,11 @@ const ChatPage = () => {
 
       const data = await apiCall(`?${params}`, {
         method: "POST",
-        body: JSON.stringify({ message: input.trim() }),
+        body: JSON.stringify({ message: fullMessage }),
       })
 
       setMessages((prev) => [...prev, { role: "assistant", content: data.response }])
+
       if (data.conversation_id !== selectedConversation) {
         setSelectedConversation(data.conversation_id)
         fetchUserConversations()
@@ -219,6 +223,7 @@ const ChatPage = () => {
       setLoading(false)
     }
   }
+
 
   const deleteConversation = async (conversationId: string) => {
     try {

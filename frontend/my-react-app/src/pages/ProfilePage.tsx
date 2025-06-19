@@ -21,6 +21,8 @@ import {
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { useAppSelector, useAppDispatch } from "../redux/hooks"
+import { updateUser } from "../redux/slices/userSlice"
+
 
 interface UserPreferences {
   dietary_restrictions: string[]
@@ -128,38 +130,40 @@ const ProfilePage: React.FC = () => {
     }))
   }
 
-  const handleSave = async () => {
-    try {
-      setLoading(true)
-      setError("")
+const handleSave = async () => {
+  try {
+    setLoading(true)
+    setError("")
+    console.log(formData)
 
-      // Here you would make an API call to update the user profile
-      const response = await fetch(`http://localhost:8000/api/v1/user/${user?.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-        },
-        body: JSON.stringify(formData),
-      })
+    const response = await fetch(`http://localhost:8000/api/v1/user/update`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+      },
+      body: JSON.stringify(formData),
+    })
 
-      if (!response.ok) {
-        throw new Error("Failed to update profile")
-      }
-
-      // Update Redux state with new user data
-      // dispatch(updateUser(formData))
-
-      setIsEditing(false)
-      setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 3000)
-    } catch (error) {
-      console.error("Failed to update profile:", error)
-      setError("Failed to update profile. Please try again.")
-    } finally {
-      setLoading(false)
+    if (!response.ok) {
+      throw new Error("Failed to update profile")
     }
+
+    const updatedUser = await response.json()
+
+    dispatch(updateUser(updatedUser)) // ✅ Redux state updated
+
+    setIsEditing(false)
+    setSaveSuccess(true)
+    setTimeout(() => setSaveSuccess(false), 3000)
+  } catch (error) {
+    console.error("Failed to update profile:", error)
+    setError("Failed to update profile. Please try again.")
+  } finally {
+    setLoading(false)
   }
+}
+
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {

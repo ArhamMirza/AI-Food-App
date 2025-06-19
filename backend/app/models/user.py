@@ -8,15 +8,15 @@ class UserRole(str, Enum):
     ADMIN = "admin"
 
 class DietaryRestriction(str, Enum):
-    VEGETARIAN = "vegetarian"
-    VEGAN = "vegan"
-    GLUTEN_FREE = "gluten_free"
-    DAIRY_FREE = "dairy_free"
-    NUT_FREE = "nut_free"
-    KETO = "keto"
-    PALEO = "paleo"
-    HALAL = "halal"
-    KOSHER = "kosher"
+    VEGETARIAN = "Vegetarian"
+    VEGAN = "Vegan"
+    GLUTEN_FREE = "Gluten_free"
+    DAIRY_FREE = "Dairy_free"
+    NUT_FREE = "Nut_free"
+    KETO = "Keto"
+    PALEO = "Paleo"
+    HALAL = "Halal"
+    KOSHER = "Kosher"
 
 class UserPreferences(BaseModel):
     dietary_restrictions: List[DietaryRestriction] = []

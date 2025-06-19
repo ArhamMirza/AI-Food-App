@@ -122,12 +122,29 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     }
   };
 
-  const hasRecipeContent = !isUser && (
-    message.content.toLowerCase().includes('recipe') ||
-    message.content.toLowerCase().includes('ingredients') ||
-    message.content.toLowerCase().includes('instructions') ||
-    message.content.split('\n').length > 3
-  );
+  const hasRecipeContent = !isUser && (() => {
+    const content = message.content.toLowerCase();
+
+    const includesKeywords = 
+      content.includes('ingredients:') &&
+      content.includes('instructions:');
+
+    const hasTimeMetadata =
+      content.includes('servings') ||
+      content.includes('prep time') ||
+      content.includes('cook time') ||
+      content.includes('total time');
+
+    const hasBulletPoints = /(^|\n)[\-\*]\s/.test(message.content); // lines starting with "-" or "*"
+    const hasNumberedSteps = /(^|\n)\d+\.\s/.test(message.content);  // lines like "1. "
+
+    const hasEnoughLines = message.content.split('\n').length > 8;
+
+    return includesKeywords &&
+          (hasTimeMetadata || hasBulletPoints || hasNumberedSteps) &&
+          hasEnoughLines;
+  })();
+
 
   return (
     <div className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}>

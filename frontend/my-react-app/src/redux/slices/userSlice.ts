@@ -51,6 +51,19 @@ const userSlice = createSlice({
     setError: (state, action: PayloadAction<string>) => {
       state.error = action.payload;
     },
+    updateUser: (state, action: PayloadAction<Partial<User>>) => {
+      if (state.user) {
+        state.user = {
+          ...state.user,
+          ...action.payload,
+          preferences: {
+            ...state.user.preferences,
+            ...action.payload.preferences,
+          },
+        };
+      }
+}
+
   },
   extraReducers: (builder) => {
     builder
@@ -72,5 +85,5 @@ const userSlice = createSlice({
   },
 });
 
-export const { login, logout, setError } = userSlice.actions;
+export const { login, logout, setError, updateUser } = userSlice.actions;
 export default userSlice.reducer;
