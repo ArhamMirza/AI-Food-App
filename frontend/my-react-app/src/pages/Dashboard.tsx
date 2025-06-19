@@ -559,16 +559,7 @@ const Dashboard: React.FC = () => {
                           )}
                         </div>
 
-                        {/* Add Meal Button */}
-                        <div className="mt-3 pt-2 border-t border-slate-700/30">
-                          <button
-                            onClick={() => handleAddMeal(day.dateStr)}
-                            className="w-full text-green-400 hover:text-green-300 text-xs flex items-center justify-center gap-1 py-1 hover:bg-green-500/10 rounded transition-colors"
-                          >
-                            <Plus size={12} />
-                            Add Meal
-                          </button>
-                        </div>
+                        {/*   */}
                       </div>
                     </div>
                   )
