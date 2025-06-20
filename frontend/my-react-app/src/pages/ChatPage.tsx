@@ -34,11 +34,21 @@ import { authorizedFetch } from "../utils/auth"
 const BASE_URL = "http://localhost:8000/api/v1/chatbot/chat"
 const RECIPE_URL = "http://localhost:8000/api/v1/recipe"
 
-// Utility functions
 const extractRecipeContent = (content: string) => {
-  const sentences = content.split(/(?<=[.!?])\s+/)
-  return sentences.length <= 1 ? content : sentences.slice(1).join(" ").trim()
-}
+  // Define regex to detect the beginning of structured recipe sections
+  const sectionMarkerRegex = /(^|\n)(\s*(###|[\*\-]|\d+\.)\s+|\s*\w+\s*:\s*)/i;
+
+  const match = sectionMarkerRegex.exec(content);
+  
+  if (match && match.index > 0) {
+    // Return content *after* the first section marker
+    return content.slice(match.index).trim();
+  }
+
+  // If no marker is found, fall back to default
+  return content.trim();
+};
+
 
 const reconstructFullContent = (originalContent: string, editedRecipe: string) => {
   const sentences = originalContent.split(/(?<=[.!?])\s+/)

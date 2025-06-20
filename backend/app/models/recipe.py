@@ -20,18 +20,22 @@ class RecipeResponse(BaseModel):
     content: dict
     # created_at: datetime
     # updated_at: datetime
-    
+
 class RecipeSearchResponse(BaseModel):
     success: bool
     data: RecipeResponse
+    message: Optional[str] = None
+
+class RecipeSearchWebResponse(BaseModel):
+    success: bool
+    data: str
     message: Optional[str] = None
 
 class SavedRecipe(BaseModel):
     user_id: str
     title: str
     content: str
-
-    
+  
 
 class RecipeListResponse(BaseModel):
     success: bool

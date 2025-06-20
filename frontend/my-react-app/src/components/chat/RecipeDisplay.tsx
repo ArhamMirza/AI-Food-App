@@ -7,43 +7,28 @@ interface RecipeDisplayProps {
   onOpenEditor?: (content: string) => void;
 }
 
-// Utility to detect and convert URLs to clickable links
 const renderTextWithLinks = (text: string) => {
-  const urlRegex = /(https?:\/\/(?:[-\w.])+(:\d+)?(?:\/[\w\/_.]*)?(?:\?[\w&=%.]*)?(?:#[\w.-]*)?)/gi;
-  const parts: (string | JSX.Element)[] = [];
-  let lastIndex = 0;
-  let match;
+  const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`[\]]+)/gi;
+  const parts = text.split(urlRegex);
 
-  while ((match = urlRegex.exec(text)) !== null) {
-    const start = match.index;
-    const end = urlRegex.lastIndex;
-
-    if (start > lastIndex) {
-      parts.push(text.slice(lastIndex, start));
+  return parts.map((part, index) => {
+    if (urlRegex.test(part)) {
+      return (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-400 hover:text-blue-300 underline inline-flex items-center gap-1 break-all"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {part}
+          <ExternalLink size={12} className="flex-shrink-0" />
+        </a>
+      );
     }
-
-    parts.push(
-      <a
-        key={`link-${start}`}
-        href={match[0]}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-blue-400 hover:text-blue-300 underline inline-flex items-center gap-1 break-words"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {match[0]}
-        <ExternalLink size={12} className="flex-shrink-0" />
-      </a>
-    );
-
-    lastIndex = end;
-  }
-
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
-  }
-
-  return parts.length ? parts : text;
+    return part;
+  });
 };
 
 const RecipeDisplay: React.FC<RecipeDisplayProps> = ({
@@ -52,8 +37,22 @@ const RecipeDisplay: React.FC<RecipeDisplayProps> = ({
   onOpenEditor
 }) => {
   const lines = content.split('\n');
-  const title = lines[0];
-  const body = lines.slice(1).join('\n').trim();
+  const introLines: string[] = [];
+  let cutoffIndex = lines.length;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line.startsWith('###') || line.includes(':')) {
+      cutoffIndex = i;
+      break;
+    }
+    if (line !== '') {
+      introLines.push(line);
+    }
+  }
+
+  const firstSentence = introLines.join(' ');
+  const recipeContent = lines.slice(cutoffIndex).join('\n').trim();
 
   const handleOpenEditor = () => {
     if (onOpenEditor) {
@@ -62,24 +61,13 @@ const RecipeDisplay: React.FC<RecipeDisplayProps> = ({
   };
 
   return (
-    <div className="space-y-4 text-slate-100">
-      {/* Title section */}
-      <h2 className="text-xl font-semibold text-slate-200 leading-snug">
-        {renderTextWithLinks(title)}
-      </h2>
-
-      {/* Recipe content preview */}
-      {body && (
-        <div className="rounded-xl bg-slate-800/40 border border-slate-600/40 overflow-hidden shadow-sm">
-          <div className="p-4">
-            <pre className="whitespace-pre-wrap font-mono text-sm text-slate-300 leading-relaxed">
-              {body}
-            </pre>
-          </div>
-
+    <div className="space-y-3">
+      <div>{renderTextWithLinks(firstSentence)}</div>
+      {recipeContent && (
+        <div className="border border-slate-600/50 rounded-xl overflow-hidden bg-slate-700/30 backdrop-blur-sm">
           <button
             onClick={handleOpenEditor}
-            className="flex items-center justify-between w-full p-3 bg-slate-700/40 hover:bg-slate-600/30 transition-colors border-t border-slate-600/30"
+            className="w-full flex items-center justify-between p-4 hover:bg-slate-600/20 transition-colors"
           >
             <div className="flex items-center gap-2">
               <ChefHat size={18} className="text-blue-400" />

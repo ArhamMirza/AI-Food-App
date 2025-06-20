@@ -3,7 +3,7 @@ from typing import Dict, Any, List
 from datetime import datetime
 from fastapi import HTTPException, status
 import json
-from app.models.recipe import RecipeSearchRequest, RecipeSearchResponse, RecipeResponse, RecipeListResponse
+from app.models.recipe import RecipeSearchRequest, RecipeSearchResponse, RecipeResponse, RecipeListResponse,RecipeSearchWebResponse
 from app.schemas.recipe_schema import RecipeSchema
 from app.services.recipe_service import handle_recipe_function_call
 from app.config import settings
@@ -24,7 +24,6 @@ def document_to_recipe_response(doc: Dict[str, Any]) -> RecipeResponse:
 @router.post("/search", response_model=RecipeSearchResponse)
 async def search_recipes(
     request: RecipeSearchRequest,     
-    token_payload: dict = Depends(get_token_payload)
 ):
     """
     Search for recipes based on query and optional filters.
@@ -44,16 +43,17 @@ async def search_recipes(
         
         # Call the existing function
         result = handle_recipe_function_call(arguments_json)
+        print(result)
         
         # Check if result indicates an error
         if result.startswith("Error") or result.startswith("Please provide"):
-            return RecipeSearchResponse(
+            return RecipeSearchWebResponse(
                 success=False,
                 data="",
                 message=result
             )
         
-        return RecipeSearchResponse(
+        return RecipeSearchWebResponse(
             success=True,
             data=result,
             message="Recipe search completed successfully"

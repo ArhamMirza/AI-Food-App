@@ -83,9 +83,10 @@ class ChatService:
                 "Do not output any code or gibberish, only human-like text."
                 "Make sure your response is accurate and do not mix up or make up ingredients or steps"
                 "Make sure your measurements are accurate"
-                "Make sure to mention ingredients in your recipes under ###Ingredients:"
+                "Make sure to mention ingredients in your recipes under ###Ingredients: and instructions under ###Instructions:"
                 "Make sure to only give detailed recipes if user specifically asks"
                 "If user asks for food ideas, simply list them and give brief description rather than full recipes"
+                "Make sure all lists are numbered"
                 
             )
         }
