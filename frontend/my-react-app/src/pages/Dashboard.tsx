@@ -15,17 +15,15 @@ import {
   ChevronLeft,
   ChevronRight,
   MessageSquare,
-  Plus,
   Search,
   Clock,
   Coffee,
   Soup,
-  User
+  User,
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { useAppSelector } from "../redux/hooks"
 import { authorizedFetch } from "../utils/auth" // adjust path as needed
-
 
 interface NavItem {
   icon: React.ReactNode
@@ -75,7 +73,7 @@ const Dashboard: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>("")
   const navigate = useNavigate()
 
-  const user:any = useAppSelector((state) => state.user.user)
+  const user: any = useAppSelector((state) => state.user.user)
 
   const API_BASE_URL = "http://localhost:8000/api/v1"
   const RECIPE_URL = `${API_BASE_URL}/recipe`
@@ -96,24 +94,21 @@ const Dashboard: React.FC = () => {
 
   const fetchUserRecipes = async () => {
     try {
-      setLoading(true);
+      setLoading(true)
 
-      const response = await authorizedFetch(`${RECIPE_URL}/user/${USER_ID}`);
+      const response = await authorizedFetch(`${RECIPE_URL}/user/${USER_ID}`)
 
-      if (!response.ok) throw new Error(`API call failed: ${response.status}`);
+      if (!response.ok) throw new Error(`API call failed: ${response.status}`)
 
-      const data: ApiResponse<Recipe[]> = await response.json();
-      const fetchedRecipes = Array.isArray(data.data) ? data.data : [];
-      setRecipes(fetchedRecipes);
-
+      const data: ApiResponse<Recipe[]> = await response.json()
+      const fetchedRecipes = Array.isArray(data.data) ? data.data : []
+      setRecipes(fetchedRecipes)
     } catch (error) {
-      console.error("Failed to load recipes:", error);
+      console.error("Failed to load recipes:", error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
-
-
+  }
 
   const fetchMealPlans = async () => {
     try {
@@ -130,7 +125,6 @@ const Dashboard: React.FC = () => {
       setMealPlans([])
     }
   }
-
 
   const handleLogout = () => {
     localStorage.removeItem("access_token")
@@ -207,8 +201,15 @@ const Dashboard: React.FC = () => {
   const calendarDays = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(startDate)
     date.setDate(startDate.getDate() + i)
+
+    // Use consistent date formatting to avoid timezone issues
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, "0")
+    const day = String(date.getDate()).padStart(2, "0")
+    const dateStr = `${year}-${month}-${day}`
+
     return {
-      dateStr: date.toISOString().split("T")[0],
+      dateStr,
       dayName: date.toLocaleDateString("en-US", { weekday: "short" }),
       dayNumber: date.getDate(),
       month: date.toLocaleDateString("en-US", { month: "short" }),
@@ -247,6 +248,11 @@ const Dashboard: React.FC = () => {
   // Helper function to truncate long meal names
   const truncateMealName = (name: string, maxLength = 20) => {
     return name.length > maxLength ? `${name.substring(0, maxLength)}...` : name
+  }
+
+  const handleDayClick = (dateStr: string) => {
+    // Navigate to meal plan page with the selected date as a query parameter
+    navigate(`/meal-plans?date=${dateStr}`)
   }
 
   return (
@@ -515,14 +521,19 @@ const Dashboard: React.FC = () => {
                 {calendarDays.map((day) => {
                   const meals = getMealsForDate(day.dateStr)
                   return (
-                    <div key={day.dateStr} className="flex flex-col">
+                    <div
+                      key={day.dateStr}
+                      className="flex flex-col cursor-pointer"
+                      onClick={() => handleDayClick(day.dateStr)}
+                      title={`Click to view meal plan for ${day.month} ${day.dayNumber}`}
+                    >
                       <div className="text-center text-gray-300 font-medium mb-2">{day.dayName}</div>
                       <div
                         className={`p-3 rounded-lg ${
                           day.isCurrentDay
-                            ? "bg-green-500/20 border border-green-500/30"
-                            : "bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30"
-                        } transition-all duration-200 min-h-[160px] flex flex-col`}
+                            ? "bg-green-500/20 border border-green-500/30 hover:bg-green-500/30"
+                            : "bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 hover:border-slate-600/50"
+                        } transition-all duration-200 min-h-[160px] flex flex-col hover:scale-[1.02] hover:shadow-lg`}
                       >
                         {/* Date Header */}
                         <div className="text-center mb-3">

@@ -140,15 +140,28 @@ const AuthPage: React.FC = () => {
       const userInfo = await dispatch(fetchUserInfo(data.access_token)).unwrap()
 
       // Check if user needs onboarding
-      if (
-        userInfo.preferences?.diet === "none" ||
-        !userInfo.preferences?.allergies ||
-        Object.keys(userInfo.preferences.allergies).length === 0
-      ) {
-        navigate("/onboarding")
+
+      const createdAt = new Date(userInfo.created_at);
+      const now = new Date();
+      const diffInMinutes = (now.getTime() - createdAt.getTime()) / 1000 / 60;
+      console.log(diffInMinutes)
+
+      // You decide what "empty preferences" means
+      const preferences = userInfo.preferences;
+      const preferencesAreEmpty =
+        (!preferences.dietary_restrictions || preferences.dietary_restrictions.length === 0) &&
+        (!preferences.allergies || preferences.allergies.length === 0) &&
+        (!preferences.favorite_cuisines || preferences.favorite_cuisines.length === 0)
+
+      const shouldOnboard = (diffInMinutes-300) < 5 && preferencesAreEmpty;
+
+      if (shouldOnboard) {
+        navigate("/onboarding");
       } else {
-        navigate("/dashboard")
+        navigate("/dashboard");
       }
+
+
     } catch (error) {
       console.error("Firebase auth success handler error:", error)
       const errorMessage = error instanceof Error ? error.message : "Authentication failed"

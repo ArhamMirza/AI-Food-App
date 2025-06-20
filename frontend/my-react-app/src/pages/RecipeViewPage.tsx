@@ -586,7 +586,7 @@ const RecipeViewPage: React.FC = () => {
                     <FileText size={16} />
                     Recipe
                   </button>
-                  <button
+                  {/* <button
                     onClick={() => setViewMode("shopping-list")}
                     className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
                       viewMode === "shopping-list"
@@ -601,7 +601,7 @@ const RecipeViewPage: React.FC = () => {
                         {ingredients.length}
                       </span>
                     )}
-                  </button>
+                  </button> */}
                 </div>
 
                 {isEditing ? (

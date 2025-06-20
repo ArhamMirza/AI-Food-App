@@ -15,8 +15,6 @@ import {
   Utensils,
   Heart,
 } from "lucide-react"
-import { useNavigate } from "react-router-dom"
-import { useAppSelector, useAppDispatch } from "../redux/hooks"
 
 interface UserPreferences {
   dietary_restrictions: string[]
@@ -36,10 +34,6 @@ const OnboardingPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string>("")
   const [success, setSuccess] = useState<boolean>(false)
-
-  const navigate = useNavigate()
-  const dispatch = useAppDispatch()
-  const user = useAppSelector((state) => state.user.user)
 
   const [formData, setFormData] = useState<OnboardingFormData>({
     preferences: {
@@ -93,26 +87,13 @@ const OnboardingPage: React.FC = () => {
       setLoading(true)
       setError("")
 
-      const response = await fetch(`http://localhost:8000/api/v1/user/update`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-        },
-        body: JSON.stringify({
-          user_id: user?.id,
-          preferences: formData.preferences,
-        }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.detail || "Failed to update profile")
-      }
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 2000))
 
       setSuccess(true)
       setTimeout(() => {
-        navigate("/dashboard")
+        // navigate("/dashboard")
+        console.log("Redirecting to dashboard...")
       }, 1500)
     } catch (error) {
       console.error("Failed to update profile:", error)
@@ -123,7 +104,7 @@ const OnboardingPage: React.FC = () => {
   }
 
   const handleSkip = () => {
-    navigate("/dashboard")
+    console.log("Skipping to dashboard...")
   }
 
   const handleNext = () => {
@@ -143,19 +124,19 @@ const OnboardingPage: React.FC = () => {
       value: "beginner",
       label: "Beginner",
       description: "Just starting out, learning the basics",
-      icon: <Clock size={24} />,
+      icon: <Clock size={20} className="sm:w-6 sm:h-6" />,
     },
     {
       value: "intermediate",
       label: "Intermediate",
       description: "Some cooking experience, comfortable with recipes",
-      icon: <Utensils size={24} />,
+      icon: <Utensils size={20} className="sm:w-6 sm:h-6" />,
     },
     {
       value: "advanced",
       label: "Advanced",
       description: "Experienced cook, comfortable experimenting",
-      icon: <ChefHat size={24} />,
+      icon: <ChefHat size={20} className="sm:w-6 sm:h-6" />,
     },
   ]
 
@@ -211,15 +192,17 @@ const OnboardingPage: React.FC = () => {
   if (success) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-        <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8 max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Check className="w-8 h-8 text-green-400" />
+        <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6 sm:p-8 max-w-md w-full text-center">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+            <Check className="w-6 h-6 sm:w-8 sm:h-8 text-green-400" />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-4">Welcome to Food AI!</h2>
-          <p className="text-gray-300 mb-6">Your preferences have been saved. Let's start cooking!</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Welcome to Food AI!</h2>
+          <p className="text-gray-300 mb-4 sm:mb-6 text-sm sm:text-base">
+            Your preferences have been saved. Let's start cooking!
+          </p>
           <div className="flex items-center justify-center">
-            <div className="w-6 h-6 border-2 border-green-400 border-t-transparent rounded-full animate-spin"></div>
-            <span className="ml-2 text-gray-400">Redirecting to dashboard...</span>
+            <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-green-400 border-t-transparent rounded-full animate-spin"></div>
+            <span className="ml-2 text-gray-400 text-sm sm:text-base">Redirecting to dashboard...</span>
           </div>
         </div>
       </div>
@@ -227,35 +210,37 @@ const OnboardingPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
       {/* Background decoration */}
-      <div className="absolute inset-0 opacity-10 pointer-events-none">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-[#3A2F5F] rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-72 h-72 bg-[#4A406F] rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-80 w-72 h-72 bg-[#5A517F] rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
+      <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
+        <div className="absolute top-10 sm:top-20 left-10 sm:left-20 w-48 h-48 sm:w-72 sm:h-72 bg-[#3A2F5F] rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+        <div className="absolute top-20 sm:top-40 right-10 sm:right-20 w-48 h-48 sm:w-72 sm:h-72 bg-[#4A406F] rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-40 sm:left-80 w-48 h-48 sm:w-72 sm:h-72 bg-[#5A517F] rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
       </div>
 
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-2xl">
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8">
+        <div className="w-full max-w-4xl">
           {/* Header */}
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center mb-6">
+          <div className="text-center mb-6 sm:mb-8">
+            <div className="flex items-center justify-center mb-4 sm:mb-6">
               <div className="relative">
-                <ChefHat className="w-12 h-12 text-green-400" />
-                <Sparkles className="w-6 h-6 text-green-300 absolute -top-1 -right-1 animate-pulse" />
+                <ChefHat className="w-10 h-10 sm:w-12 sm:h-12 text-green-400" />
+                <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-green-300 absolute -top-1 -right-1 animate-pulse" />
               </div>
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Welcome to Food AI!</h1>
-            <p className="text-gray-300">Let's personalize your cooking experience</p>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2">Welcome to Food AI!</h1>
+            <p className="text-gray-300 text-sm sm:text-base">Let's personalize your cooking experience</p>
           </div>
 
           {/* Progress Bar */}
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             <div className="flex justify-between items-center mb-2">
-              <span className="text-sm text-gray-400">
+              <span className="text-xs sm:text-sm text-gray-400">
                 Step {currentStep} of {totalSteps}
               </span>
-              <span className="text-sm text-gray-400">{Math.round((currentStep / totalSteps) * 100)}% complete</span>
+              <span className="text-xs sm:text-sm text-gray-400">
+                {Math.round((currentStep / totalSteps) * 100)}% complete
+              </span>
             </div>
             <div className="w-full bg-slate-700/50 rounded-full h-2">
               <div
@@ -267,37 +252,39 @@ const OnboardingPage: React.FC = () => {
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 bg-red-500/20 border border-red-500/30 rounded-xl p-4 flex items-center gap-3">
-              <AlertCircle className="text-red-400" size={20} />
-              <span className="text-red-300">{error}</span>
-              <button onClick={() => setError("")} className="ml-auto text-red-400 hover:text-red-300">
+            <div className="mb-4 sm:mb-6 bg-red-500/20 border border-red-500/30 rounded-xl p-3 sm:p-4 flex items-start gap-3">
+              <AlertCircle className="text-red-400 flex-shrink-0 mt-0.5" size={18} />
+              <span className="text-red-300 text-sm sm:text-base flex-1">{error}</span>
+              <button onClick={() => setError("")} className="text-red-400 hover:text-red-300 flex-shrink-0">
                 <X size={16} />
               </button>
             </div>
           )}
 
           {/* Main Content */}
-          <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-8">
+          <div className="bg-slate-800/30 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-4 sm:p-6 lg:p-8">
             {/* Step 1: Cooking Skill Level */}
             {currentStep === 1 && (
               <div>
-                <h2 className="text-2xl font-bold mb-2">What's your cooking skill level?</h2>
-                <p className="text-gray-400 mb-6">This helps us suggest recipes that match your experience</p>
+                <h2 className="text-xl sm:text-2xl font-bold mb-2">What's your cooking skill level?</h2>
+                <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">
+                  This helps us suggest recipes that match your experience
+                </p>
 
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-1 gap-3 sm:gap-4">
                   {skillLevels.map((level) => (
                     <button
                       key={level.value}
                       onClick={() => handleInputChange("preferences.cooking_skill_level", level.value)}
-                      className={`p-6 rounded-xl border transition-all duration-200 text-left ${
+                      className={`p-4 sm:p-6 rounded-xl border transition-all duration-200 text-left ${
                         formData.preferences.cooking_skill_level === level.value
-                          ? "border-green-500 bg-green-500/20 scale-105"
+                          ? "border-green-500 bg-green-500/20 scale-[1.02]"
                           : "border-slate-600 bg-slate-700/30 hover:border-slate-500 hover:bg-slate-700/50"
                       }`}
                     >
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-3 sm:gap-4">
                         <div
-                          className={`p-3 rounded-lg ${
+                          className={`p-2 sm:p-3 rounded-lg flex-shrink-0 ${
                             formData.preferences.cooking_skill_level === level.value
                               ? "bg-green-500/30 text-green-400"
                               : "bg-slate-600/50 text-gray-400"
@@ -305,9 +292,9 @@ const OnboardingPage: React.FC = () => {
                         >
                           {level.icon}
                         </div>
-                        <div>
-                          <div className="font-semibold text-lg">{level.label}</div>
-                          <div className="text-gray-400 text-sm">{level.description}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-base sm:text-lg">{level.label}</div>
+                          <div className="text-gray-400 text-xs sm:text-sm">{level.description}</div>
                         </div>
                       </div>
                     </button>
@@ -319,27 +306,29 @@ const OnboardingPage: React.FC = () => {
             {/* Step 2: Preferred Meal Prep Time */}
             {currentStep === 2 && (
               <div>
-                <h2 className="text-2xl font-bold mb-2">How much time do you usually have for cooking?</h2>
-                <p className="text-gray-400 mb-6">We'll prioritize recipes that fit your schedule</p>
+                <h2 className="text-xl sm:text-2xl font-bold mb-2">How much time do you usually have for cooking?</h2>
+                <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">
+                  We'll prioritize recipes that fit your schedule
+                </p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   {prepTimes.map((time) => (
                     <button
                       key={time.value}
                       onClick={() => handleInputChange("preferences.preferred_meal_prep_time", time.value)}
-                      className={`p-4 rounded-xl border transition-all duration-200 text-left ${
+                      className={`p-3 sm:p-4 rounded-xl border transition-all duration-200 text-left ${
                         formData.preferences.preferred_meal_prep_time === time.value
-                          ? "border-green-500 bg-green-500/20 scale-105"
+                          ? "border-green-500 bg-green-500/20 scale-[1.02]"
                           : "border-slate-600 bg-slate-700/30 hover:border-slate-500 hover:bg-slate-700/50"
                       }`}
                     >
-                      <div className="font-semibold">{time.label}</div>
-                      <div className="text-gray-400 text-sm">{time.description}</div>
+                      <div className="font-semibold text-sm sm:text-base">{time.label}</div>
+                      <div className="text-gray-400 text-xs sm:text-sm">{time.description}</div>
                     </button>
                   ))}
                 </div>
 
-                <div className="mt-6">
+                <div className="mt-4 sm:mt-6">
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Or enter a custom time (minutes)
                   </label>
@@ -354,7 +343,7 @@ const OnboardingPage: React.FC = () => {
                       handleInputChange("preferences.preferred_meal_prep_time", Number.parseInt(e.target.value) || null)
                     }
                     placeholder="e.g., 25"
-                    className="w-full bg-slate-900/50 text-white border border-slate-600/50 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-green-500/50"
+                    className="w-full bg-slate-900/50 text-white border border-slate-600/50 rounded-lg p-3 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-green-500/50"
                   />
                 </div>
               </div>
@@ -363,10 +352,12 @@ const OnboardingPage: React.FC = () => {
             {/* Step 3: Dietary Restrictions & Allergies */}
             {currentStep === 3 && (
               <div>
-                <h2 className="text-2xl font-bold mb-2">Any dietary restrictions or allergies?</h2>
-                <p className="text-gray-400 mb-6">We'll make sure to avoid ingredients that don't work for you</p>
+                <h2 className="text-xl sm:text-2xl font-bold mb-2">Any dietary restrictions or allergies?</h2>
+                <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">
+                  We'll make sure to avoid ingredients that don't work for you
+                </p>
 
-                <div className="space-y-6">
+                <div className="space-y-6 sm:space-y-8">
                   <MultiSelectField
                     label="Dietary Restrictions"
                     description="Select any that apply to you"
@@ -394,8 +385,10 @@ const OnboardingPage: React.FC = () => {
             {/* Step 4: Favorite Cuisines */}
             {currentStep === 4 && (
               <div>
-                <h2 className="text-2xl font-bold mb-2">What cuisines do you love?</h2>
-                <p className="text-gray-400 mb-6">We'll suggest more recipes from your favorite cuisines</p>
+                <h2 className="text-xl sm:text-2xl font-bold mb-2">What cuisines do you love?</h2>
+                <p className="text-gray-400 mb-4 sm:mb-6 text-sm sm:text-base">
+                  We'll suggest more recipes from your favorite cuisines
+                </p>
 
                 <MultiSelectField
                   label="Favorite Cuisines"
@@ -410,30 +403,30 @@ const OnboardingPage: React.FC = () => {
             )}
 
             {/* Navigation Buttons */}
-            <div className="flex justify-between items-center mt-8 pt-6 border-t border-slate-700/50">
-              <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-slate-700/50 gap-4 sm:gap-0">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 order-2 sm:order-1">
                 {currentStep > 1 && (
                   <button
                     onClick={handlePrevious}
-                    className="px-4 py-2 bg-slate-700/50 hover:bg-slate-700/70 text-white rounded-lg transition-colors"
+                    className="px-4 py-2 bg-slate-700/50 hover:bg-slate-700/70 text-white rounded-lg transition-colors text-sm sm:text-base"
                   >
                     Previous
                   </button>
                 )}
                 <button
                   onClick={handleSkip}
-                  className="px-4 py-2 text-gray-400 hover:text-white transition-colors flex items-center gap-2"
+                  className="px-4 py-2 text-gray-400 hover:text-white transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
                 >
                   <Skip size={16} />
                   Skip for now
                 </button>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 order-1 sm:order-2">
                 {currentStep < totalSteps ? (
                   <button
                     onClick={handleNext}
-                    className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center gap-2"
+                    className="flex-1 sm:flex-none px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center justify-center gap-2 text-sm sm:text-base"
                   >
                     Next
                     <ArrowRight size={16} />
@@ -442,7 +435,7 @@ const OnboardingPage: React.FC = () => {
                   <button
                     onClick={handleSave}
                     disabled={loading}
-                    className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    className="flex-1 sm:flex-none px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm sm:text-base"
                   >
                     {loading ? (
                       <>
@@ -510,18 +503,18 @@ const MultiSelectField: React.FC<MultiSelectFieldProps> = ({
     <div>
       <div className="flex items-center gap-2 mb-2">
         <span className={colors.icon}>{icon}</span>
-        <h3 className="text-lg font-semibold">{label}</h3>
+        <h3 className="text-base sm:text-lg font-semibold">{label}</h3>
       </div>
-      <p className="text-gray-400 text-sm mb-4">{description}</p>
+      <p className="text-gray-400 text-xs sm:text-sm mb-3 sm:mb-4">{description}</p>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
         {displayOptions.map((option) => {
           const isSelected = values.includes(option)
           return (
             <button
               key={option}
               onClick={() => (isSelected ? onRemove(values.indexOf(option)) : onAdd(option))}
-              className={`p-3 rounded-lg border transition-all duration-200 text-sm ${
+              className={`p-2 sm:p-3 rounded-lg border transition-all duration-200 text-xs sm:text-sm ${
                 isSelected ? colors.selected : colors.unselected
               }`}
             >
@@ -532,22 +525,25 @@ const MultiSelectField: React.FC<MultiSelectFieldProps> = ({
       </div>
 
       {options.length > 8 && (
-        <button onClick={() => setShowAll(!showAll)} className="mt-3 text-green-400 hover:text-green-300 text-sm">
+        <button
+          onClick={() => setShowAll(!showAll)}
+          className="mt-3 text-green-400 hover:text-green-300 text-xs sm:text-sm"
+        >
           {showAll ? "Show less" : `Show ${options.length - 8} more`}
         </button>
       )}
 
       {values.length > 0 && (
-        <div className="mt-4 p-3 bg-slate-700/20 rounded-lg">
-          <p className="text-sm text-gray-400 mb-2">Selected ({values.length}):</p>
-          <div className="flex flex-wrap gap-2">
+        <div className="mt-3 sm:mt-4 p-3 bg-slate-700/20 rounded-lg">
+          <p className="text-xs sm:text-sm text-gray-400 mb-2">Selected ({values.length}):</p>
+          <div className="flex flex-wrap gap-1 sm:gap-2">
             {values.map((value, index) => (
               <span
                 key={index}
                 className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${colors.selected}`}
               >
-                {value}
-                <button onClick={() => onRemove(index)} className="hover:opacity-70">
+                <span className="truncate max-w-[120px] sm:max-w-none">{value}</span>
+                <button onClick={() => onRemove(index)} className="hover:opacity-70 flex-shrink-0">
                   <X size={12} />
                 </button>
               </span>

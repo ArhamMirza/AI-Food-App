@@ -22,6 +22,7 @@ import {
 import { useNavigate } from "react-router-dom"
 import { useAppSelector, useAppDispatch } from "../redux/hooks"
 import { updateUser } from "../redux/slices/userSlice"
+import { authorizedFetch } from "../utils/auth"
 
 
 interface UserPreferences {
@@ -136,12 +137,8 @@ const handleSave = async () => {
     setError("")
     console.log(formData)
 
-    const response = await fetch(`http://localhost:8000/api/v1/user/update`, {
+    const response = await authorizedFetch(`http://localhost:8000/api/v1/user/update`, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-      },
       body: JSON.stringify(formData),
     })
 
@@ -163,6 +160,7 @@ const handleSave = async () => {
     setLoading(false)
   }
 }
+
 
 
   const formatDate = (dateString: string) => {
