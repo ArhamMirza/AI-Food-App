@@ -9,11 +9,13 @@ from app.config import settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
+    print("⏳ Starting up...")
     await connect_to_mongo()
+    print("✅ Connected to MongoDB")
     yield
-    # Shutdown
-    await close_mongo_connection()
+    print("🛑 Shutting down...")
+    await close_mongo_connection()  # Add await here
+    print("✅ MongoDB connection closed")
 
 app = FastAPI(
     title="AI Food Assistant API",

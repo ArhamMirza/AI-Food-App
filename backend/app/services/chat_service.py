@@ -9,11 +9,12 @@ from typing import Optional
 # Import your existing models (assuming they're in a separate file)
 from app.models.recipe import RecipeSearchRequest, RecipeSearchResponse
 from app.schemas.chat_schema import ChatSchema  # Make sure this import is valid
+from app.config import settings
 import uuid
 
 
 class ChatService:
-    def __init__(self, groq_api_key: str, recipe_api_url: str = "http://localhost:8000/api/v1/recipe/search", model: str = "meta-llama/llama-4-maverick-17b-128e-instruct"):
+    def __init__(self, groq_api_key: str, recipe_api_url: str = settings.RECIPE_API_URL, model: str = "meta-llama/llama-4-maverick-17b-128e-instruct"):
         """
         Initialize the ChatService
         

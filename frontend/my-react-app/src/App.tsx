@@ -11,6 +11,7 @@ import MealPlanPage from './pages/MealPlanPage'
 import ProfilePage from './pages/ProfilePage'
 import ProtectedRoute from './components/ProtectedRoute' // ✅ import this
 import OnboardingPage from './pages/OnboardingPage'
+import OnboardingGuard from './components/OnboardingGuard'
 
 function App() {
   return (
@@ -82,10 +83,13 @@ function App() {
           path="/onboarding"
           element={
             <ProtectedRoute>
-              <OnboardingPage />
+              <OnboardingGuard>
+                <OnboardingPage />
+              </OnboardingGuard>
             </ProtectedRoute>
           }
         />
+
       </Routes>
     </div>
   )
