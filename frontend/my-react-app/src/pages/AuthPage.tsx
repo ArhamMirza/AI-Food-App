@@ -8,6 +8,7 @@ import { auth, googleProvider } from "../firebase/firebase"
 import { useAppDispatch, useAppSelector } from "../redux/hooks"
 import { fetchUserInfo, setError } from "../redux/slices/userSlice"
 import { useNavigate } from "react-router-dom"
+import { useOnboarding } from "../context/OnboardingContext"
 
 interface FormData {
   username?: string
@@ -64,6 +65,8 @@ const AuthPage: React.FC = () => {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const userError = useAppSelector((state) => state.user.error)
+  const { setAllowOnboarding } = useOnboarding()
+
 
   useEffect(() => {
     // Check if Firebase is properly configured
@@ -155,11 +158,14 @@ const AuthPage: React.FC = () => {
 
       const shouldOnboard = (diffInMinutes-300) < 5 && preferencesAreEmpty;
 
+
       if (shouldOnboard) {
-        navigate("/onboarding");
+        setAllowOnboarding(true)
+        navigate("/onboarding")
       } else {
-        navigate("/dashboard");
+        navigate("/dashboard")
       }
+
 
 
     } catch (error) {
