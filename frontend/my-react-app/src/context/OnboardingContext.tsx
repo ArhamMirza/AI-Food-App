@@ -3,7 +3,7 @@ import { createContext, useContext, useState } from 'react'
 
 const OnboardingContext = createContext({
   allowOnboarding: false,
-  setAllowOnboarding: (value: boolean) => {},
+  setAllowOnboarding: (_value: boolean) => {},
 })
 
 export const useOnboarding = () => useContext(OnboardingContext)

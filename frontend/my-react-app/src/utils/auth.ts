@@ -13,7 +13,7 @@ const refreshAccessToken = async () => {
   localStorage.setItem("access_token", data.access_token)
 }
 
-export const authorizedFetch = async (url: string, options: any = {}, retry = true) => {
+export const authorizedFetch :any = async (url: string, options: any = {}, retry = true) => {
   // 🚨 Check if token exists before making request
   accessToken = localStorage.getItem("access_token") || ""
   if (!accessToken) {

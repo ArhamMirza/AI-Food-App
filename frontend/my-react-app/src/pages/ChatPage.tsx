@@ -70,7 +70,7 @@ const ChatPage = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   const user:any = useAppSelector((state) => state.user.user)
-  const preferences = useAppSelector((state) => state.user.user?.preferences)
+  const preferences:any = useAppSelector((state) => state.user.user?.preferences)
 
 
   const USER_ID = user.id
@@ -434,7 +434,7 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
           })
           showNotification("Recipe updated successfully!", "success")
         } catch (serverError) {
-          showNotification("Recipe updated locally (server sync failed)", "warning")
+          showNotification("Recipe updated locally (server sync failed)", "error")
         }
 
         setHasUnsavedChanges(false)

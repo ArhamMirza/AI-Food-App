@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import { Eye, EyeOff, Mail, Lock, User, ChefHat, Sparkles, X, CheckCircle } from "lucide-react"
 import { signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth"
 import { auth, googleProvider } from "../firebase/firebase"
-import { useAppDispatch, useAppSelector } from "../redux/hooks"
+import { useAppDispatch } from "../redux/hooks"
 import { fetchUserInfo, setError } from "../redux/slices/userSlice"
 import { useNavigate } from "react-router-dom"
 import { useOnboarding } from "../context/OnboardingContext"
@@ -32,20 +32,20 @@ const setCookie = (name: string, value: string, days: number = 7) => {
   document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;secure;samesite=strict`
 }
 
-const getCookie = (name: string): string | null => {
-  const nameEQ = name + "="
-  const ca = document.cookie.split(';')
-  for (let i = 0; i < ca.length; i++) {
-    let c = ca[i]
-    while (c.charAt(0) === ' ') c = c.substring(1, c.length)
-    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length)
-  }
-  return null
-}
+// const getCookie = (name: string): string | null => {
+//   const nameEQ = name + "="
+//   const ca = document.cookie.split(';')
+//   for (let i = 0; i < ca.length; i++) {
+//     let c = ca[i]
+//     while (c.charAt(0) === ' ') c = c.substring(1, c.length)
+//     if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length)
+//   }
+//   return null
+// }
 
-const deleteCookie = (name: string) => {
-  document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`
-}
+// const deleteCookie = (name: string) => {
+//   document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`
+// }
 
 const AuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true)
@@ -64,7 +64,7 @@ const AuthPage: React.FC = () => {
 
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
-  const userError = useAppSelector((state) => state.user.error)
+  // const userError = useAppSelector((state) => state.user.error)
   const { setAllowOnboarding } = useOnboarding()
 
   const BASE_URL = import.meta.env.VITE_API_URL
@@ -538,11 +538,11 @@ const AuthPage: React.FC = () => {
               </div>
             )}
 
-            {(errors.general || userError) && (
+            {/* {(errors.general || userError) && (
               <div className="bg-red-900/50 border border-red-500 rounded-lg p-3">
                 <p className="text-red-400 text-sm">{errors.general || userError}</p>
               </div>
-            )}
+            )} */}
 
             <button
               onClick={handleSubmit}

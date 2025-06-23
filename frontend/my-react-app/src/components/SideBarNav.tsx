@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 
 interface NavItem {
-  icon: JSX.Element;
+  icon: React.JSX.Element;
   label: string;
   href: string;
 }
@@ -48,7 +48,7 @@ const SidebarNav: React.FC<SidebarNavProps> = ({
   ];
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const showText = !isCollapsed || isMobile;
+  // const showText = !isCollapsed || isMobile;
 
   return (
     <>

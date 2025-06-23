@@ -14,7 +14,7 @@ interface ApiResponse<T> {
 }
 
 interface NotificationHook {
-  showNotification: (message: string, type: 'success' | 'error' | 'warning') => void;
+  showNotification: (message: string, type: 'success' | 'error' ) => void;
 }
 
 const USER_ID = '683ac8b1dcd4216109341d9f';
@@ -103,7 +103,7 @@ const useRecipes = () => {
       );
       showNotification('Recipe updated successfully!', 'success');
     } catch (error) {
-      showNotification('Recipe updated locally (server sync failed)', 'warning');
+      showNotification('Recipe updated locally (server sync failed)', 'error');
     }
   };
 

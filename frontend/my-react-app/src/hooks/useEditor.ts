@@ -3,7 +3,7 @@ import useNotifications from '../components/chat/useNotifications';
 
 // Define interfaces for type safety
 interface NotificationHook {
-  showNotification: (message: string, type: 'success' | 'error' | 'warning') => void;
+  showNotification: (message: string, type: 'success' | 'error') => void;
 }
 
 const useEditor = () => {

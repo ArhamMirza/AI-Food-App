@@ -3,7 +3,6 @@ import AuthPage from './pages/AuthPage'
 import EmailVerificationPage from './pages/EmailVerificationPage'
 import HomeLandingPage from './pages/HomeLandingPage'
 import Dashboard from './pages/Dashboard'
-import CreateRecipe from './pages/CreateRecipe'
 import ChatPage from './pages/ChatPage'
 import RecipesPage from './pages/RecipesPage'
 import RecipeViewPage from './pages/RecipeViewPage'
@@ -31,14 +30,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/create-recipe"
-          element={
-            <ProtectedRoute>
-              <CreateRecipe />
-            </ProtectedRoute>
-          }
-        />
+        
         <Route
           path="/chat"
           element={

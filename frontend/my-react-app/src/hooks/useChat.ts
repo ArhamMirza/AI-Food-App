@@ -20,7 +20,7 @@ interface ApiResponse<T> {
 }
 
 interface NotificationHook {
-  showNotification: (message: string, type: 'success' | 'error' | 'warning') => void;
+  showNotification: (message: string, type: 'success' | 'error') => void;
 }
 
 const USER_ID = '683ac8b1dcd4216109341d9f';
@@ -50,7 +50,7 @@ const useChat = () => {
   const fetchUserConversations = async (): Promise<void> => {
     try {
       setError(null);
-      const data = await apiCall<Conversation[]>(`/user/${USER_ID}`);
+      const data :any = await apiCall<Conversation[]>(`/user/${USER_ID}`);
       setConversations(Array.isArray(data) ? data : []);
       if (data.length > 0 && !selectedConversation) {
         await loadConversationMessages(data[0].conversation_id);
@@ -136,7 +136,7 @@ const useChat = () => {
       });
 
       setMessages([]);
-      setSelectedConversation(data.conversation_id);
+      setSelectedConversation(data.conversation_id ?? null);
       await fetchUserConversations();
       showNotification('New chat created successfully', 'success');
     } catch (error) {

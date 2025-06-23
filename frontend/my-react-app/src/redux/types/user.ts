@@ -1,5 +1,5 @@
-import { ShoppingList } from "./shoppingLists";
-import { MealPlan } from "./mealPlan";
+import type{ ShoppingList } from "./shoppingLists";
+import type{ MealPlan } from "./mealPlan";
 
 export interface User {
   id: string;

@@ -68,10 +68,10 @@ interface ApiResponse<T> {
 }
 
 const MealPlanPage: React.FC = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false)
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(false)
+  // const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false)
+  // const [isCollapsed, setIsCollapsed] = useState<boolean>(false)
   const [scrollY, setScrollY] = useState<number>(0)
-  const [currentDate, setCurrentDate] = useState<Date>(new Date())
+  // const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date())
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     const today = new Date()

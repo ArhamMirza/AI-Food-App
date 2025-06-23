@@ -70,7 +70,7 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true)
   const [mealPlans, setMealPlans] = useState<MealPlan[]>([])
   const [showMealPlanModal, setShowMealPlanModal] = useState<boolean>(false)
-  const [selectedDate, setSelectedDate] = useState<string>("")
+  const selectedDate: string = ""
   const navigate = useNavigate()
 
   const user: any = useAppSelector((state) => state.user.user)
@@ -137,10 +137,10 @@ const Dashboard: React.FC = () => {
     setWeekOffset((prev) => (direction === "next" ? prev + 1 : prev - 1))
   }
 
-  const handleAddMeal = (date: string) => {
-    setSelectedDate(date)
-    setShowMealPlanModal(true)
-  }
+  // const handleAddMeal = (date: string) => {
+  //   setSelectedDate(date)
+  //   setShowMealPlanModal(true)
+  // }
 
   const handleSaveMeal = async (recipeData: string | Recipe, isCustom: boolean) => {
     try {

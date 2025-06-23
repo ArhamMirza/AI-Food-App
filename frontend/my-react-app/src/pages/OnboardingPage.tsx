@@ -41,7 +41,7 @@ const OnboardingPage: React.FC = () => {
 
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const user = useAppSelector((state) => state.user.user)
+  const user :any = useAppSelector((state) => state.user.user)
 
   const BASE_URL = import.meta.env.VITE_API_URL
 

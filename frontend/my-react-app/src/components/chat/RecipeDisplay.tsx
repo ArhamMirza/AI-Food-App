@@ -33,7 +33,7 @@ const renderTextWithLinks = (text: string) => {
 
 const RecipeDisplay: React.FC<RecipeDisplayProps> = ({
   content,
-  showNotification,
+  // showNotification,
   onOpenEditor
 }) => {
   const lines = content.split('\n');

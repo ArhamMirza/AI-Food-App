@@ -17,11 +17,11 @@ const stripUserPreferences = (text: string): string => {
   ).trim();
 };
 
-export const renderTextWithLinks = (text: string): (string | JSX.Element)[] => {
+export const renderTextWithLinks = (text: string): (string | React.JSX.Element)[] => {
   const urlRegex = /https?:\/\/[^\s/$.?#].[^\s]*/gi;
   urlRegex.lastIndex = 0;
 
-  const parts: (string | JSX.Element)[] = [];
+  const parts: (string | React.JSX.Element)[] = [];
   let lastIndex = 0;
   let match;
   let linkId = 0;
@@ -69,7 +69,7 @@ const RecipeDisplay: React.FC<{
   showNotification: (message: string, type: 'success' | 'error') => void;
   onOpenEditor: (content: string) => void;
   onSaveRecipe: () => void;
-}> = ({ content, showNotification, onOpenEditor, onSaveRecipe }) => {
+}> = ({ content, onOpenEditor, onSaveRecipe }) => {
   const lines = content.split('\n');
   const firstSentence = lines[0];
   const recipeContent = lines.slice(1).join('\n').trim();
@@ -110,7 +110,7 @@ const RecipeDisplay: React.FC<{
 
 const ChatMessage: React.FC<ChatMessageProps> = ({
   message,
-  index,
+  // index,
   showNotification,
   onOpenEditor,
   onSaveRecipe
