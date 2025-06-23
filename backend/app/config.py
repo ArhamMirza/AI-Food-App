@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     # Google search api
     GOOGLE_CSE_ID: str = ""
     GOOGLE_API_KEY: str = ""
+
+    #Firebase
+    FIREBASE_CREDENTIALS: str = ""
     
     
     class Config:
