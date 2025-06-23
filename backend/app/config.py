@@ -49,4 +49,3 @@ class Settings(BaseSettings):
         env_file = "app/.env"
 
 settings = Settings()
-print(settings.MONGODB_URL)
