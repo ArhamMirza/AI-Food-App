@@ -30,9 +30,10 @@ import React from "react"
 import { useAppSelector } from "../redux/hooks"
 import { authorizedFetch } from "../utils/auth"
 
+const BASE_URL = import.meta.env.VITE_API_URL
 
-const BASE_URL = "http://localhost:8000/api/v1/chatbot/chat"
-const RECIPE_URL = "http://localhost:8000/api/v1/recipe"
+const BASE_CHAT_URL = `${BASE_URL}/chatbot/chat`
+const RECIPE_URL = `${BASE_URL}/recipe`
 
 const extractRecipeContent = (content: string) => {
   // Define regex to detect the beginning of structured recipe sections
@@ -110,7 +111,7 @@ const ChatPage = () => {
   // utils/apiCall.ts
 
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
-  const response = await authorizedFetch(`${BASE_URL}${endpoint}`, options)
+  const response = await authorizedFetch(`${BASE_CHAT_URL}${endpoint}`, options)
   if (!response.ok) throw new Error(`API call failed: ${response.status}`)
   return response.json()
 }

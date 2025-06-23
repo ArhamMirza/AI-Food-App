@@ -67,6 +67,8 @@ const AuthPage: React.FC = () => {
   const userError = useAppSelector((state) => state.user.error)
   const { setAllowOnboarding } = useOnboarding()
 
+  const BASE_URL = import.meta.env.VITE_API_URL
+
 
   useEffect(() => {
     // Check if Firebase is properly configured
@@ -119,7 +121,7 @@ const AuthPage: React.FC = () => {
       const idToken = await user.getIdToken()
 
       // Send the Firebase ID token to your backend with credentials to set secure cookies
-      const backendResponse = await fetch("http://localhost:8000/api/v1/auth/google", {
+      const backendResponse = await fetch(`${BASE_URL}/auth/google`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -219,7 +221,7 @@ const AuthPage: React.FC = () => {
     setErrors({})
 
     try {
-      const endpoint = isLogin ? "http://localhost:8000/api/v1/auth/login" : "http://localhost:8000/api/v1/auth/signup"
+      const endpoint = isLogin ? `${BASE_URL}/auth/login` : `${BASE_URL}/auth/signup`
       const payload = isLogin
         ? { email: formData.email, password: formData.password }
         : { username: formData.username, email: formData.email, password: formData.password }

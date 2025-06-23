@@ -54,6 +54,9 @@ const ProfilePage: React.FC = () => {
   const dispatch = useAppDispatch()
   const user = useAppSelector((state) => state.user.user)
 
+  const BASE_URL = import.meta.env.VITE_API_URL
+
+
   const [formData, setFormData] = useState<ProfileFormData>({
     username: user?.username || "",
     email: user?.email || "",
@@ -137,7 +140,7 @@ const handleSave = async () => {
     setError("")
     console.log(formData)
 
-    const response = await authorizedFetch(`http://localhost:8000/api/v1/user/update`, {
+    const response = await authorizedFetch(`${BASE_URL}/api/v1/user/update`, {
       method: "PUT",
       body: JSON.stringify(formData),
     })

@@ -5,6 +5,11 @@ const EmailVerificationPage: React.FC = () => {
   const [verificationStatus, setVerificationStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>('');
 
+  const BASE_URL = import.meta.env.VITE_API_URL
+
+
+  
+
   useEffect(() => {
     const verifyEmail = async () => {
       // Get the token from URL parameters
@@ -19,7 +24,7 @@ const EmailVerificationPage: React.FC = () => {
 
       try {
         // Send POST request to verify email endpoint with token as query parameter
-        const response = await fetch(`http://localhost:8000/api/v1/auth/verify-email?token=${encodeURIComponent(token)}`, {
+        const response = await fetch(`${BASE_URL}/auth/verify-email?token=${encodeURIComponent(token)}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

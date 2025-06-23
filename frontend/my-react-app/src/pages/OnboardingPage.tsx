@@ -43,6 +43,9 @@ const OnboardingPage: React.FC = () => {
   const dispatch = useAppDispatch()
   const user = useAppSelector((state) => state.user.user)
 
+  const BASE_URL = import.meta.env.VITE_API_URL
+
+
   const [formData, setFormData] = useState<OnboardingFormData>({
     preferences: {
       dietary_restrictions: [],
@@ -95,7 +98,7 @@ const OnboardingPage: React.FC = () => {
       setLoading(true)
       setError("")
 
-      const response = await authorizedFetch(`http://localhost:8000/api/v1/user/update`, {
+      const response = await authorizedFetch(`${BASE_URL}/user/update`, {
         method: "PUT",
         body: JSON.stringify({
           user_id: user?.id,

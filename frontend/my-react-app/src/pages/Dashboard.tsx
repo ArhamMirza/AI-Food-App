@@ -75,7 +75,7 @@ const Dashboard: React.FC = () => {
 
   const user: any = useAppSelector((state) => state.user.user)
 
-  const API_BASE_URL = "http://localhost:8000/api/v1"
+  const API_BASE_URL = import.meta.env.VITE_API_URL
   const RECIPE_URL = `${API_BASE_URL}/recipe`
   const MEAL_PLAN_URL = `${API_BASE_URL}/meal-plan`
   const USER_ID = user.id // This would normally come from auth context
@@ -95,7 +95,8 @@ const Dashboard: React.FC = () => {
   const fetchUserRecipes = async () => {
     try {
       setLoading(true)
-
+      
+      console.log(`Fetching Recipes from ${RECIPE_URL}`)
       const response = await authorizedFetch(`${RECIPE_URL}/user/${USER_ID}`)
 
       if (!response.ok) throw new Error(`API call failed: ${response.status}`)

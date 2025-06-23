@@ -95,7 +95,7 @@ const MealPlanPage: React.FC = () => {
   const [isGeneratingShoppingList, setIsGeneratingShoppingList] = useState<boolean>(false)
   const navigate = useNavigate()
 
-  const API_BASE_URL = "http://localhost:8000/api/v1"
+  const API_BASE_URL = import.meta.env.VITE_API_URL
   const RECIPE_URL = `${API_BASE_URL}/recipe`
   const MEAL_PLAN_URL = `${API_BASE_URL}/meal-plan`
   const user: any = useAppSelector((state) => state.user.user)

@@ -60,7 +60,7 @@ const RecipeViewPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("recipe")
   const navigate = useNavigate()
 
-  const API_BASE_URL = "http://localhost:8000/api/v1"
+  const API_BASE_URL = import.meta.env.VITE_API_URL
   const RECIPE_URL = `${API_BASE_URL}/recipe`
 
   useEffect(() => {

@@ -58,7 +58,7 @@ const RecipesPage: React.FC = () => {
 
   const navigate = useNavigate()
 
-  const API_BASE_URL = "http://localhost:8000/api/v1"
+  const API_BASE_URL = import.meta.env.VITE_API_URL
   const RECIPE_URL = `${API_BASE_URL}/recipe`
   const user:any = useAppSelector((state) => state.user.user)
   const USER_ID = user.id
