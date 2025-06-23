@@ -21,7 +21,7 @@ def document_to_recipe_response(doc: Dict[str, Any]) -> RecipeResponse:
         # updated_at=doc.get("updated_at")
     )
 
-@router.post("/search", response_model=RecipeSearchResponse)
+@router.post("/search", response_model=RecipeSearchWebResponse)
 async def search_recipes(
     request: RecipeSearchRequest,     
 ):
@@ -38,6 +38,7 @@ async def search_recipes(
         # Convert request to JSON string for the existing function
         arguments_dict = request.model_dump()
         arguments_json = json.dumps(arguments_dict)
+        print(arguments_json)
         
         # logger.info(f"Searching recipes with query: {request.recipe_query}")
         
