@@ -32,20 +32,11 @@ const setCookie = (name: string, value: string, days: number = 7) => {
   document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;secure;samesite=strict`
 }
 
-// const getCookie = (name: string): string | null => {
-//   const nameEQ = name + "="
-//   const ca = document.cookie.split(';')
-//   for (let i = 0; i < ca.length; i++) {
-//     let c = ca[i]
-//     while (c.charAt(0) === ' ') c = c.substring(1, c.length)
-//     if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length)
-//   }
-//   return null
-// }
-
-// const deleteCookie = (name: string) => {
-//   document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`
-// }
+// Utility to detect mobile devices
+const isMobileDevice = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+         window.innerWidth <= 768
+}
 
 const AuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true)
@@ -54,6 +45,7 @@ const AuthPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [showEmailVerificationPopup, setShowEmailVerificationPopup] = useState(false)
   const [firebaseLoaded, setFirebaseLoaded] = useState(false)
+  const [isProcessingRedirect, setIsProcessingRedirect] = useState(false)
   const [formData, setFormData] = useState<FormData>({
     email: "",
     password: "",
@@ -64,11 +56,9 @@ const AuthPage: React.FC = () => {
 
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
-  // const userError = useAppSelector((state) => state.user.error)
   const { setAllowOnboarding } = useOnboarding()
 
   const BASE_URL = import.meta.env.VITE_API_URL
-
 
   useEffect(() => {
     // Check if Firebase is properly configured
@@ -89,18 +79,32 @@ const AuthPage: React.FC = () => {
 
     checkFirebaseConfig()
 
-    // Check for redirect result (in case user was redirected back from Google)
-    getRedirectResult(auth)
-      .then((result) => {
+    // Check for redirect result immediately on component mount
+    const handleRedirectResult = async () => {
+      try {
+        setIsProcessingRedirect(true)
+        console.log("Checking for redirect result...")
+        
+        const result = await getRedirectResult(auth)
         if (result) {
-          handleFirebaseAuthSuccess(result.user)
+          console.log("Redirect result found:", result.user.email)
+          await handleFirebaseAuthSuccess(result.user)
+        } else {
+          console.log("No redirect result found")
         }
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error("Redirect result error:", error)
-        setErrors({ general: "Authentication redirect failed" })
-      })
-  }, [])
+        setErrors({ general: "Authentication redirect failed. Please try again." })
+      } finally {
+        setIsProcessingRedirect(false)
+      }
+    }
+
+    // Only check for redirect result if Firebase is loaded
+    if (firebaseLoaded) {
+      handleRedirectResult()
+    }
+  }, [firebaseLoaded])
 
   const handleAuthSuccess = (data: any) => {
     // Store access token in localStorage (short-lived)
@@ -116,6 +120,7 @@ const AuthPage: React.FC = () => {
     try {
       setIsLoading(true)
       setErrors({})
+      console.log("Processing Firebase auth success for:", user.email)
 
       // Get the Firebase ID token
       const idToken = await user.getIdToken()
@@ -136,20 +141,20 @@ const AuthPage: React.FC = () => {
       }
 
       const data = await backendResponse.json()
-      console.log(data)
+      console.log("Backend response:", data)
 
       // Handle token storage
       handleAuthSuccess(data)
 
       // Fetch user info and redirect
       const userInfo = await dispatch(fetchUserInfo(data.access_token)).unwrap()
+      console.log("User info fetched:", userInfo)
 
       // Check if user needs onboarding
-
       const createdAt = new Date(userInfo.created_at);
       const now = new Date();
       const diffInMinutes = (now.getTime() - createdAt.getTime()) / 1000 / 60;
-      console.log(diffInMinutes)
+      console.log("Account age in minutes:", diffInMinutes)
 
       // You decide what "empty preferences" means
       const preferences = userInfo.preferences;
@@ -158,8 +163,9 @@ const AuthPage: React.FC = () => {
         (!preferences.allergies || preferences.allergies.length === 0) &&
         (!preferences.favorite_cuisines || preferences.favorite_cuisines.length === 0)
 
-      const shouldOnboard = (diffInMinutes-300) < 5 && preferencesAreEmpty;
+      const shouldOnboard = (diffInMinutes - 300) < 5 && preferencesAreEmpty;
 
+      console.log("Should onboard:", shouldOnboard)
 
       if (shouldOnboard) {
         setAllowOnboarding(true)
@@ -167,8 +173,6 @@ const AuthPage: React.FC = () => {
       } else {
         navigate("/dashboard")
       }
-
-
 
     } catch (error) {
       console.error("Firebase auth success handler error:", error)
@@ -285,9 +289,22 @@ const AuthPage: React.FC = () => {
     try {
       setIsLoading(true)
       setErrors({})
+      console.log("Starting Google auth...")
 
-      // Try popup first, fallback to redirect on mobile or if popup is blocked
+      const isMobile = isMobileDevice()
+      console.log("Is mobile device:", isMobile)
+
+      if (isMobile) {
+        // Use redirect for mobile devices
+        console.log("Using redirect for mobile...")
+        await signInWithRedirect(auth, googleProvider)
+        // The component will be unmounted here, and redirect result will be handled on return
+        return
+      }
+
+      // Try popup for desktop
       try {
+        console.log("Attempting popup auth...")
         const result = await signInWithPopup(auth, googleProvider)
         await handleFirebaseAuthSuccess(result.user)
       } catch (popupError: any) {
@@ -308,18 +325,19 @@ const AuthPage: React.FC = () => {
           return
         }
 
-        // If popup is blocked or fails, try redirect
+        // If popup fails, fallback to redirect
         if (
           popupError.code === "auth/popup-blocked" ||
           popupError.code === "auth/popup-closed-by-user" ||
-          popupError.code === "auth/cancelled-popup-request"
+          popupError.code === "auth/cancelled-popup-request" ||
+          popupError.code === "auth/popup-blocked-by-browser"
         ) {
-          console.log("Popup blocked, trying redirect...")
+          console.log("Popup blocked or closed, falling back to redirect...")
           await signInWithRedirect(auth, googleProvider)
-          // The redirect result will be handled in useEffect
-        } else {
-          throw popupError
+          return
         }
+        
+        throw popupError
       }
     } catch (error: any) {
       console.error("Google auth error:", error)
@@ -372,6 +390,19 @@ const AuthPage: React.FC = () => {
   const closeEmailVerificationPopup = () => {
     setShowEmailVerificationPopup(false)
     setIsLogin(true)
+  }
+
+  // Show loading state while processing redirect
+  if (isProcessingRedirect) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#2A1B3D] to-[#1A1A2E] flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-[#4CAF50] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-lg">Completing authentication...</p>
+          <p className="text-gray-400 text-sm mt-2">Please wait while we sign you in</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -538,11 +569,11 @@ const AuthPage: React.FC = () => {
               </div>
             )}
 
-            {/* {(errors.general || userError) && (
+            {errors.general && (
               <div className="bg-red-900/50 border border-red-500 rounded-lg p-3">
-                <p className="text-red-400 text-sm">{errors.general || userError}</p>
+                <p className="text-red-400 text-sm">{errors.general}</p>
               </div>
-            )} */}
+            )}
 
             <button
               onClick={handleSubmit}
