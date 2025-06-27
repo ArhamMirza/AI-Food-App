@@ -108,7 +108,6 @@ class ChatSchema:
         )
         return result.modified_count > 0
 
-
     @staticmethod
     async def append_message(conversation_id: str, message: Dict[str, Any]) -> bool:
         """
@@ -116,38 +115,16 @@ class ChatSchema:
 
         Args:
             conversation_id: Unique identifier for the conversation
-            message: Message to append (can be user/assistant/tool call)
+            message: Message to append (e.g., {"role": "user", "content": "..."})
 
         Returns:
             True if updated, False if not found
         """
-        if not isinstance(message, dict) or "role" not in message:
+        if not isinstance(message, dict) or "role" not in message or "content" not in message:
             raise ValueError("Invalid message format")
 
-        role = message["role"]
-        logger.info(message)
-
-        if role == "assistant" and "tool_calls" in message:
-            # Validate tool_calls structure
-            if not isinstance(message["tool_calls"], list):
-                raise ValueError("Invalid tool_calls format")
-            for tool_call in message["tool_calls"]:
-                if not all(k in tool_call for k in ("id", "type", "function")):
-                    raise ValueError("Malformed tool_call entry")
-                if not all(k in tool_call["function"] for k in ("name", "arguments")):
-                    raise ValueError("Malformed function in tool_call")
-
-        elif role in {"user", "assistant", "system"}:
-            if "content" not in message:
-                raise ValueError("Message missing content")
-
-        else:
-            raise ValueError(f"Unsupported role or structure: {message}")
-
-        # Add timestamp
-        message["timestamp"] = datetime.utcnow()
-
         db = await get_database()
+        message["timestamp"] = datetime.utcnow()
         result = await db.conversations.update_one(
             {"conversation_id": conversation_id},
             {
@@ -155,9 +132,7 @@ class ChatSchema:
                 "$set": {"updated_at": datetime.utcnow()}
             }
         )
-
         return result.modified_count > 0
-
     
     @staticmethod
     async def update_message(conversation_id: str, message_index: int, content: str, role: str) -> bool:
