@@ -153,6 +153,7 @@ class ChatService:
     async def handle_tool_calls(self, tool_calls, conversation_history: List[Dict[str, Any]], search_type: str, conversation_id: str) -> List[Dict[str, Any]]:
         """
         Handle tool calls and return updated conversation history
+        NOTE: Tool call messages are NOT saved to DB, only kept in memory for API communication
         
         Args:
             tool_calls: Tool calls from Groq response
@@ -161,12 +162,12 @@ class ChatService:
             conversation_id: ID of the conversation
             
         Returns:
-            Updated conversation history
+            Updated conversation history (in memory only)
         """
         try:
             logger.info(f"Handling {len(tool_calls)} tool calls for conversation {conversation_id}")
             
-            # Create the assistant message with tool calls
+            # Create the assistant message with tool calls (memory only - not saved to DB)
             assistant_msg_with_tools = {
                 "role": "assistant",
                 "tool_calls": [
@@ -181,16 +182,9 @@ class ChatService:
                 ]
             }
             
-            # Add to conversation history
+            # Add to conversation history (memory only - NOT saved to DB)
             conversation_history.append(assistant_msg_with_tools)
-            
-            # Try to save to database with error handling
-            try:
-                await ChatSchema.append_message(conversation_id, assistant_msg_with_tools)
-                logger.info("Successfully saved assistant message with tool calls to DB")
-            except Exception as db_error:
-                logger.error(f"Failed to save assistant message to DB: {str(db_error)}", exc_info=True)
-                # Continue processing even if DB save fails
+            logger.info("Added assistant message with tool calls to memory (not saved to DB)")
             
             # Process each tool call
             for tool_call in tool_calls:
@@ -225,7 +219,7 @@ class ChatService:
                         function_response = f"Unknown function: {function_name}"
                         logger.warning(f"Unknown function called: {function_name}")
                     
-                    # Create tool response message with explicit string conversion
+                    # Create tool response message (memory only - not saved to DB)
                     tool_response_msg = {
                         "tool_call_id": tool_call_id,
                         "role": "tool",
@@ -233,16 +227,9 @@ class ChatService:
                         "content": str(function_response)[:10000]  # Limit content length
                     }
                     
-                    # Add tool response to conversation history
+                    # Add tool response to conversation history (memory only - NOT saved to DB)
                     conversation_history.append(tool_response_msg)
-                    
-                    # Try to save to database with error handling
-                    try:
-                        await ChatSchema.append_message(conversation_id, tool_response_msg)
-                        logger.info(f"Successfully saved tool response to DB for call ID: {tool_call_id}")
-                    except Exception as db_error:
-                        logger.error(f"Failed to save tool response to DB: {str(db_error)}", exc_info=True)
-                        # Continue processing even if DB save fails
+                    logger.info(f"Added tool response to memory for call ID: {tool_call_id} (not saved to DB)")
                         
                 except Exception as e:
                     logger.error(f"Error processing individual tool call {tool_call.id}: {str(e)}", exc_info=True)
@@ -254,16 +241,17 @@ class ChatService:
         except Exception as e:
             logger.error(f"Error in handle_tool_calls: {str(e)}", exc_info=True)
             
-            # Add error message to conversation
+            # Add error message to conversation (this one we might want to save)
             error_msg = {
                 "role": "assistant",
                 "content": f"I encountered an error while searching for recipes. Please try again."
             }
             conversation_history.append(error_msg)
             
-            # Try to save error message
+            # Save error message to DB (since it's a user-facing message)
             try:
                 await ChatSchema.append_message(conversation_id, error_msg)
+                logger.info("Saved error message to DB")
             except Exception as db_error:
                 logger.error(f"Failed to save error message to DB: {str(db_error)}")
                 
@@ -332,6 +320,37 @@ class ChatService:
             logger.error(f"Error sanitizing messages: {str(e)}")
             return []
 
+    def filter_messages_for_db(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Filter out tool call messages that shouldn't be saved to DB
+        Only keeps user messages and final assistant responses
+        
+        Args:
+            messages: List of all messages including tool calls
+            
+        Returns:
+            Filtered list of messages safe for DB storage
+        """
+        try:
+            db_safe_messages = []
+            
+            for msg in messages:
+                # Skip messages with tool_calls or tool_call_id (these are internal API communication)
+                if "tool_calls" in msg or "tool_call_id" in msg or msg.get("role") == "tool":
+                    logger.debug(f"Skipping tool-related message for DB: {msg.get('role', 'unknown')}")
+                    continue
+                
+                # Keep user messages and regular assistant messages
+                if msg.get("role") in ["user", "assistant", "system"]:
+                    db_safe_messages.append(msg)
+            
+            logger.debug(f"Filtered {len(messages)} messages to {len(db_safe_messages)} DB-safe messages")
+            return db_safe_messages
+            
+        except Exception as e:
+            logger.error(f"Error filtering messages for DB: {str(e)}")
+            return []
+
     async def process_message(
         self, message: str, user_id: str, conversation_id: str, search: bool = False, search_type: str = ""
     ) -> tuple[str, str]:
@@ -359,7 +378,8 @@ class ChatService:
                     logger.error(error_msg)
                     raise ValueError(error_msg)
                 
-                conversation_history = chat_doc["messages"]
+                # Start with DB conversation history (only user/assistant messages)
+                conversation_history = chat_doc["messages"].copy()
                 logger.debug(f"Loaded conversation with {len(conversation_history)} existing messages")
                 
             except Exception as e:
@@ -376,6 +396,7 @@ class ChatService:
             
             conversation_history.append(user_msg)
             
+            # Save user message to DB immediately
             try:
                 await ChatSchema.append_message(conversation_id, user_msg)
                 logger.debug("Successfully saved user message to DB")
@@ -422,7 +443,8 @@ class ChatService:
             if tool_calls:
                 logger.info(f"Processing {len(tool_calls)} tool calls")
                 
-                # Handle tool calls and update conversation history
+                # Handle tool calls and update conversation history (in memory only)
+                # This adds tool call messages to conversation_history but doesn't save them to DB
                 conversation_history = await self.handle_tool_calls(
                     tool_calls, conversation_history, search_type, conversation_id
                 )
@@ -441,10 +463,10 @@ class ChatService:
                     final_content = second_response.choices[0].message.content
                     logger.info("Successfully got final response from Groq")
                     
-                    # Add final assistant response
+                    # Create final assistant message
                     assistant_msg = {"role": "assistant", "content": final_content}
-                    conversation_history.append(assistant_msg)
                     
+                    # Save ONLY the final assistant response to DB (not the tool calls)
                     try:
                         await ChatSchema.append_message(conversation_id, assistant_msg)
                         logger.debug("Successfully saved final assistant message to DB")
@@ -463,8 +485,8 @@ class ChatService:
                 logger.info("Got regular response from Groq (no tool calls)")
                 
                 assistant_msg = {"role": "assistant", "content": final_content}
-                conversation_history.append(assistant_msg)
                 
+                # Save regular assistant message to DB
                 try:
                     await ChatSchema.append_message(conversation_id, assistant_msg)
                     logger.debug("Successfully saved assistant message to DB")
@@ -478,7 +500,7 @@ class ChatService:
             # Return error message to user
             error_response = "I apologize, but I encountered an error while processing your request. Please try again."
             
-            # Try to save error message to conversation if possible
+            # Save error message to conversation
             try:
                 error_msg = {"role": "assistant", "content": error_response}
                 await ChatSchema.append_message(conversation_id, error_msg)
