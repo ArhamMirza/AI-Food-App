@@ -125,6 +125,7 @@ class ChatSchema:
             raise ValueError("Invalid message format")
 
         role = message["role"]
+        logger.info(message)
 
         if role == "assistant" and "tool_calls" in message:
             # Validate tool_calls structure
@@ -141,7 +142,7 @@ class ChatSchema:
                 raise ValueError("Message missing content")
 
         else:
-            raise ValueError("Unsupported role or structure")
+            raise ValueError(f"Unsupported role or structure: {message}")
 
         # Add timestamp
         message["timestamp"] = datetime.utcnow()
