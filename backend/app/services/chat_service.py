@@ -185,12 +185,12 @@ class ChatService:
             conversation_history.append(assistant_msg_with_tools)
             
             # Try to save to database with error handling
-            try:
-                await ChatSchema.append_message(conversation_id, assistant_msg_with_tools)
-                logger.info("Successfully saved assistant message with tool calls to DB")
-            except Exception as db_error:
-                logger.error(f"Failed to save assistant message to DB: {str(db_error)}", exc_info=True)
-                # Continue processing even if DB save fails
+            # try:
+            #     await ChatSchema.append_message(conversation_id, assistant_msg_with_tools)
+            #     logger.info("Successfully saved assistant message with tool calls to DB")
+            # except Exception as db_error:
+            #     logger.error(f"Failed to save assistant message to DB: {str(db_error)}", exc_info=True)
+            #     # Continue processing even if DB save fails
             
             # Process each tool call
             for tool_call in tool_calls:
