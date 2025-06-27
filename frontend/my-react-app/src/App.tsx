@@ -11,6 +11,7 @@ import ProfilePage from './pages/ProfilePage'
 import ProtectedRoute from './components/ProtectedRoute' // ✅ import this
 import OnboardingPage from './pages/OnboardingPage'
 import OnboardingGuard from './components/OnboardingGuard'
+import TestRedirect from './pages/TestRedirect'
 
 function App() {
   return (
@@ -81,6 +82,8 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/test-auth" element={<TestRedirect />} />
+
 
       </Routes>
     </div>

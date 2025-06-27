@@ -23,7 +23,12 @@ import {
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { useAppSelector } from "../redux/hooks"
+import { logout } from "../redux/slices/userSlice"
+import { signOut } from "firebase/auth"
+import type { AppDispatch } from '../redux/store';
+import { useAppDispatch } from "../redux/hooks"
 import { authorizedFetch } from "../utils/auth" // adjust path as needed
+import { auth } from "../firebase/firebase"
 
 interface NavItem {
   icon: React.ReactNode
@@ -72,6 +77,8 @@ const Dashboard: React.FC = () => {
   const [showMealPlanModal, setShowMealPlanModal] = useState<boolean>(false)
   const selectedDate: string = ""
   const navigate = useNavigate()
+  const dispatch = useAppDispatch()
+
 
   const user: any = useAppSelector((state) => state.user.user)
 
@@ -127,11 +134,30 @@ const Dashboard: React.FC = () => {
     }
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem("access_token")
-    localStorage.removeItem("refresh_token")
-    navigate("/login")
-  }
+  const handleLogout = async (dispatch: AppDispatch) => {
+    try {
+      // Sign out from Firebase Auth
+      await signOut(auth)
+
+      // Clear local storage
+      localStorage.removeItem("access_token")
+      localStorage.removeItem("refresh_token")
+
+      // Delete refresh_token cookie
+      document.cookie =
+        "refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=strict"
+
+      // Clear Redux state
+      dispatch(logout())
+
+      // Redirect to login page
+      navigate("/auth")
+    } catch (error) {
+      console.error("[LOGOUT] Error signing out:", error)
+    }
+}
+
+
 
   const navigateWeek = (direction: "prev" | "next") => {
     setWeekOffset((prev) => (direction === "next" ? prev + 1 : prev - 1))
@@ -331,7 +357,7 @@ const Dashboard: React.FC = () => {
                   onClick={(e) => {
                     if (item.href === "#logout") {
                       e.preventDefault()
-                      handleLogout()
+                      handleLogout(dispatch)
                     }
                   }}
                   className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700/50 transition-colors"
@@ -349,7 +375,7 @@ const Dashboard: React.FC = () => {
                     onClick={(e) => {
                       if (item.href === "#logout") {
                         e.preventDefault()
-                        handleLogout()
+                        handleLogout(dispatch)
                       }
                     }}
                     className="p-2 rounded-lg text-gray-300 hover:text-white hover:bg-slate-700/50 transition-colors"
