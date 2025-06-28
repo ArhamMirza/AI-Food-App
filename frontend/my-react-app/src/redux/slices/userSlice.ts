@@ -18,7 +18,7 @@ const initialState: UserState = {
 
 export const fetchUserInfo = createAsyncThunk('user/fetchUserInfo', async (accessToken: string, { rejectWithValue }) => {
   try {
-    const response = await fetch('http://localhost:8000/api/v1/auth/me', {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
