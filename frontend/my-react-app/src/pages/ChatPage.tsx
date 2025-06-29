@@ -19,7 +19,6 @@ import {
   Plus,
   ArrowLeft,
 } from "lucide-react"
-
 import Sidebar from "../components/chat/Sidebar"
 import ChatMessage from "../components/chat/ChatMessage"
 import NewChatModal from "../components/chat/NewChatModal"
@@ -38,7 +37,6 @@ const RECIPE_URL = `${BASE_URL}/recipe`
 const extractRecipeContent = (content: string) => {
   const sectionMarkerRegex = /(^|\n)(\s*(###|[*-]|\d+\.)\s+|\s*\w+\s*:\s*)/i
   const match = sectionMarkerRegex.exec(content)
-
   if (match && match.index > 0) {
     return content.slice(match.index).trim()
   }
@@ -62,10 +60,8 @@ const ChatPage = () => {
   const [error, setError] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-
   const user: any = useAppSelector((state) => state.user.user)
   const preferences: any = useAppSelector((state) => state.user.user?.preferences)
-
   const USER_ID = user?.id || "demo-user"
 
   // Modal states
@@ -202,14 +198,11 @@ const ChatPage = () => {
         search: search.toString(),
         search_type: searchType,
       })
-
       const data = await apiCall(`?${params}`, {
         method: "POST",
         body: JSON.stringify({ message: fullMessage }),
       })
-
       setMessages((prev) => [...prev, { role: "assistant", content: data.response } as Message])
-
       if (data.conversation_id !== selectedConversation) {
         setSelectedConversation(data.conversation_id)
         fetchUserConversations()
@@ -255,16 +248,13 @@ const ChatPage = () => {
 
   const startNewChat = async () => {
     if (!newChatTitle.trim()) return
-
     setLoading(true)
     setShowNewChatModal(false)
-
     try {
       const data = await apiCall(`/create?user_id=${USER_ID}`, {
         method: "POST",
         body: JSON.stringify({ title: newChatTitle.trim() }),
       })
-
       setMessages([])
       setSelectedConversation(data.conversation_id)
       setSelectedRecipe(null)
@@ -286,7 +276,6 @@ const ChatPage = () => {
         method: "PUT",
         body: JSON.stringify({ title: title.trim() }),
       })
-
       setConversations((prev) =>
         prev.map((conv) => (conv.conversation_id === conversationId ? { ...conv, title: title.trim() } : conv)),
       )
@@ -304,7 +293,6 @@ const ChatPage = () => {
         method: "PUT",
         body: JSON.stringify({ title: title.trim() }),
       })
-
       setRecipes((prev) =>
         prev.map((recipe) => (recipe.recipe_id === recipeId ? { ...recipe, title: title.trim() } : recipe)),
       )
@@ -320,14 +308,12 @@ const ChatPage = () => {
 
   const updateRecipeContent = async () => {
     if (!selectedRecipe) return
-
     try {
       setLoading(true)
       await recipeApiCall(`/${selectedRecipe}`, {
         method: "PUT",
         body: JSON.stringify({ content: recipeContent }),
       })
-
       setRecipes((prev) =>
         prev.map((recipe) =>
           recipe.recipe_id === selectedRecipe ? { ...recipe, content: { text: recipeContent } } : recipe,
@@ -352,7 +338,6 @@ const ChatPage = () => {
 
   const handleConfirmSaveRecipe = async (title: string) => {
     if (!recipeContentToSave || !title.trim()) return
-
     setLoading(true)
     try {
       const data = await apiCall("/save-recipe", {
@@ -363,7 +348,6 @@ const ChatPage = () => {
           title: title.trim(),
         }),
       })
-
       setRecipes((prev) => [...prev, data])
       showNotification("Recipe saved successfully!", "success")
       setShowSaveRecipeModal(false)
@@ -404,7 +388,6 @@ const ChatPage = () => {
     try {
       if (editingMessageIndex !== null && selectedConversation) {
         const updatedFullContent = reconstructFullContent(originalContent, editorContent)
-
         setMessages((prev) => {
           const newMessages = [...prev]
           newMessages[editingMessageIndex] = {
@@ -413,7 +396,6 @@ const ChatPage = () => {
           }
           return newMessages
         })
-
         try {
           await apiCall(`/${selectedConversation}/message/${editingMessageIndex}`, {
             method: "PUT",
@@ -426,7 +408,6 @@ const ChatPage = () => {
         } catch (serverError) {
           showNotification("Recipe updated locally (server sync failed)", "error")
         }
-
         setHasUnsavedChanges(false)
         setOriginalContent(updatedFullContent)
       } else {
@@ -474,9 +455,9 @@ const ChatPage = () => {
 
   // Recipe Display Component - Mobile optimized
   const RecipeDisplay = () => (
-    <div className="flex-1 flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Recipe Header - Mobile optimized */}
-      <div className="p-3 sm:p-4 lg:p-6 border-b border-slate-700/50 bg-slate-800/30 backdrop-blur-sm">
+      <div className="flex-shrink-0 p-3 sm:p-4 lg:p-6 border-b border-slate-700/50 bg-slate-800/30 backdrop-blur-sm">
         <div className="flex flex-col gap-3 sm:gap-4">
           <div className="flex-1">
             {isEditingRecipeTitle ? (
@@ -567,30 +548,32 @@ const ChatPage = () => {
         </div>
       </div>
 
-      {/* Recipe Content - Mobile optimized */}
-      <div className="flex-1 p-3 sm:p-4 lg:p-6 overflow-hidden">
+      {/* Recipe Content - Scrollable */}
+      <div className="flex-1 overflow-hidden">
         {isEditingRecipe ? (
-          <div className="h-full flex flex-col">
+          <div className="h-full p-3 sm:p-4 lg:p-6">
             <textarea
               value={recipeContent}
               onChange={(e) => setRecipeContent(e.target.value)}
-              className="w-full h-full min-h-[300px] bg-slate-900/50 text-gray-100 border border-slate-600/50 rounded-lg p-3 sm:p-4 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-green-500/50 resize-none custom-scrollbar"
+              className="w-full h-full bg-slate-900/50 text-gray-100 border border-slate-600/50 rounded-lg p-3 sm:p-4 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-green-500/50 resize-none custom-scrollbar"
               placeholder="Enter your recipe content here..."
             />
           </div>
         ) : (
-          <div className="bg-slate-900/30 rounded-lg p-3 sm:p-4 lg:p-6 h-full overflow-y-auto custom-scrollbar">
-            <div className="prose prose-invert prose-headings:text-green-400 prose-strong:text-emerald-300 prose-em:text-blue-300 max-w-none">
-              {recipeContent.split("\n\n").map((paragraph, i) => (
-                <p key={i} className="mb-4 text-gray-100 leading-relaxed text-sm sm:text-base">
-                  {paragraph.split("\n").map((line, j) => (
-                    <React.Fragment key={j}>
-                      {line}
-                      {j < paragraph.split("\n").length - 1 && <br />}
-                    </React.Fragment>
-                  ))}
-                </p>
-              ))}
+          <div className="h-full overflow-y-auto custom-scrollbar">
+            <div className="p-3 sm:p-4 lg:p-6">
+              <div className="prose prose-invert prose-headings:text-green-400 prose-strong:text-emerald-300 prose-em:text-blue-300 max-w-none">
+                {recipeContent.split("\n\n").map((paragraph, i) => (
+                  <p key={i} className="mb-4 text-gray-100 leading-relaxed text-sm sm:text-base">
+                    {paragraph.split("\n").map((line, j) => (
+                      <React.Fragment key={j}>
+                        {line}
+                        {j < paragraph.split("\n").length - 1 && <br />}
+                      </React.Fragment>
+                    ))}
+                  </p>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -602,7 +585,7 @@ const ChatPage = () => {
   const MobileEditor = () => (
     <div className="fixed inset-0 z-50 bg-slate-900 flex flex-col lg:relative lg:w-1/2 lg:border-l lg:border-slate-600/50 lg:bg-slate-800/50 lg:backdrop-blur-sm">
       {/* Editor Header - Mobile optimized */}
-      <div className="flex items-center justify-between p-3 sm:p-4 border-b border-slate-600/50 bg-slate-800/50 backdrop-blur-sm">
+      <div className="flex-shrink-0 flex items-center justify-between p-3 sm:p-4 border-b border-slate-600/50 bg-slate-800/50 backdrop-blur-sm">
         <div className="flex items-center gap-2">
           <button
             onClick={handleCloseEditor}
@@ -647,7 +630,7 @@ const ChatPage = () => {
 
       {/* Editor Info Banner */}
       {editingMessageIndex !== null && (
-        <div className="px-4 py-2 bg-blue-500/10 border-b border-slate-600/50">
+        <div className="flex-shrink-0 px-4 py-2 bg-blue-500/10 border-b border-slate-600/50">
           <p className="text-sm text-blue-400">
             Editing message #{editingMessageIndex + 1} • Changes will be saved to database and chat
           </p>
@@ -655,7 +638,7 @@ const ChatPage = () => {
       )}
 
       {/* Editor Content */}
-      <div className="flex-1 p-3 sm:p-4 overflow-hidden">
+      <div className="flex-1 overflow-hidden p-3 sm:p-4">
         <textarea
           value={editorContent}
           onChange={(e) => {
@@ -670,29 +653,66 @@ const ChatPage = () => {
   )
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-hidden">
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; border-radius: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #10b981 0%, #059669 100%); border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.1); }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #34d399 0%, #10b981 100%); }
-        .custom-scrollbar { scrollbar-width: thin; scrollbar-color: #10b981 transparent; }
-        
-        /* Mobile viewport height adjustment for browser bars */
-        @supports (height: 100dvh) {
-          .mobile-full-height {
-            height: 100dvh;
-          }
-        }
-        
-        /* Ensure proper mobile layout */
-        @media (max-width: 1023px) {
-          .mobile-chat-container {
-            height: 100vh;
-            height: 100dvh;
-          }
-        }
-      `}</style>
+    <div className="flex h-screen h-dvh bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-hidden">
+      <style>
+        {`
+.custom-scrollbar::-webkit-scrollbar { width: 8px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; border-radius: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #10b981 0%, #059669 100%); border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.1); }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #34d399 0%, #10b981 100%); }
+.custom-scrollbar { scrollbar-width: thin; scrollbar-color: #10b981 transparent; }
+
+/* Hide scrollbars for input textarea */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Prevent any scrolling on the main container */
+body, html {
+  overflow: hidden;
+  height: 100%;
+  height: 100dvh;
+}
+
+/* Perfect mobile layout - works with or without navigation bars */
+@supports (height: 100dvh) {
+  .perfect-mobile-height {
+    height: 100dvh;
+  }
+}
+
+/* Mobile input - perfectly aligned and positioned */
+@media screen and (max-width: 768px) {
+  .mobile-input-perfect {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: rgba(30, 41, 59, 0.95);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  
+  /* Chat area with perfect spacing */
+  .mobile-chat-perfect {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  }
+  
+  /* Simple input container */
+  .mobile-input-container {
+    padding: 16px;
+  }
+}
+
+/* Fallback for browsers without dvh support */
+@supports not (height: 100dvh) {
+  .perfect-mobile-height {
+    height: 100vh;
+  }
+}
+`}
+      </style>
 
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
@@ -738,13 +758,13 @@ const ChatPage = () => {
         onDeleteRecipe={deleteRecipe}
       />
 
-      {/* Main Content Area */}
+      {/* Main Content Area - Dynamic Layout */}
       <div
-        className={`flex flex-1 min-w-0 mobile-chat-container overflow-hidden ${editorOpen && !selectedRecipe ? "hidden lg:flex" : ""}`}
+        className={`flex flex-1 min-w-0 overflow-hidden perfect-mobile-height ${editorOpen && !selectedRecipe ? "hidden lg:flex" : ""}`}
       >
-        <div className="w-full flex flex-col mobile-chat-container overflow-hidden">
-          {/* Header - Fixed on mobile */}
-          <header className="flex items-center justify-between p-3 sm:p-4 border-b border-slate-700/50 bg-slate-800/50 backdrop-blur-sm flex-shrink-0">
+        <div className="w-full flex flex-col h-full overflow-hidden">
+          {/* Header - Fixed at top */}
+          <header className="flex-shrink-0 flex items-center justify-between p-3 sm:p-4 border-b border-slate-700/50 bg-slate-800/50 backdrop-blur-sm">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <button
                 onClick={() => setSidebarOpen(true)}
@@ -787,10 +807,10 @@ const ChatPage = () => {
             <RecipeDisplay />
           ) : (
             <>
-              {/* Chat Area - Scrollable on mobile */}
+              {/* Chat Area - Scrollable middle section with dynamic spacing */}
               <div
                 ref={chatRef}
-                className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4 bg-gradient-to-b from-transparent to-slate-900/20 custom-scrollbar"
+                className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4 bg-gradient-to-b from-transparent to-slate-900/20 custom-scrollbar mobile-chat-perfect"
               >
                 {!selectedConversation ? (
                   <div className="flex items-center justify-center h-full">
@@ -822,7 +842,6 @@ const ChatPage = () => {
                         onSaveRecipe={() => handleSaveRecipe(msg.content)}
                       />
                     ))}
-
                     {loading && (
                       <div className="flex items-center gap-3 text-gray-400 px-2 sm:px-4">
                         <div className="w-6 h-6 sm:w-8 sm:h-8 bg-slate-800 rounded-full flex items-center justify-center">
@@ -835,64 +854,68 @@ const ChatPage = () => {
                 )}
               </div>
 
-              {/* Input Area - Fixed at bottom on mobile */}
-              <footer className="p-3 sm:p-4 border-t border-slate-700/50 bg-slate-800/30 backdrop-blur-sm flex-shrink-0">
-                <div className="flex items-end gap-2 sm:gap-3 max-w-4xl mx-auto">
-                  <div className="flex-1 relative">
-                    <textarea
-                      ref={textareaRef}
-                      rows={1}
-                      className="w-full resize-none rounded-xl sm:rounded-2xl bg-slate-800/80 text-white px-3 sm:px-4 py-2 sm:py-3 pr-16 sm:pr-20 border border-slate-700/50 focus:outline-none focus:border-green-500/50 focus:ring-1 focus:ring-green-500/20 backdrop-blur-sm transition-all duration-200 text-sm placeholder-gray-400"
-                      placeholder={
-                        selectedConversation
-                          ? "Ask about recipes, meal planning, or cooking tips..."
-                          : "Select a chat to start messaging"
-                      }
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault()
-                          sendMessage()
+              {/* Input Area - Perfectly positioned and aligned */}
+              <footer className="flex-shrink-0 mobile-input-perfect lg:relative lg:bg-slate-800/50 lg:backdrop-blur-sm lg:border-t lg:border-slate-700/50 lg:p-4">
+                <div className="mobile-input-container lg:max-w-4xl lg:mx-auto">
+                  <div className="flex items-end gap-3">
+                    <div className="flex-1 relative">
+                      <textarea
+                        ref={textareaRef}
+                        rows={1}
+                        className="w-full resize-none rounded-2xl bg-slate-800/90 text-white px-4 py-3 pr-24 border border-slate-700/50 focus:outline-none focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 backdrop-blur-sm transition-all duration-200 text-base placeholder-gray-400 shadow-lg no-scrollbar"
+                        placeholder={
+                          selectedConversation
+                            ? "Ask about recipes, meal planning, or cooking tips..."
+                            : "Select a chat to start messaging"
                         }
-                      }}
-                      disabled={!selectedConversation || loading}
-                      style={{ minHeight: "40px", maxHeight: "120px" }}
-                    />
-                    <div className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 flex gap-1 sm:gap-2">
-                      <button
-                        onClick={() => toggleSearch("web")}
-                        className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
-                          search && searchType === "web"
-                            ? "bg-green-600 text-white"
-                            : "bg-slate-700/50 text-gray-400 hover:bg-slate-600/50"
-                        }`}
-                        title="Search Web"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault()
+                            sendMessage()
+                          }
+                        }}
                         disabled={!selectedConversation || loading}
-                      >
-                        <Globe size={14} />
-                      </button>
-                      <button
-                        onClick={() => toggleSearch("youtube")}
-                        className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
-                          search && searchType === "youtube"
-                            ? "bg-green-600 text-white"
-                            : "bg-slate-700/50 text-gray-400 hover:bg-slate-600/50"
-                        }`}
-                        title="Search YouTube"
-                        disabled={!selectedConversation || loading}
-                      >
-                        <Youtube size={14} />
-                      </button>
+                        style={{ minHeight: "48px", maxHeight: "120px" }}
+                      />
+                      {/* Search buttons positioned like ChatGPT - bottom right inside input */}
+                      <div className="absolute bottom-2 right-2 flex gap-1">
+                        <button
+                          onClick={() => toggleSearch("web")}
+                          className={`p-2 rounded-lg transition-colors ${
+                            search && searchType === "web"
+                              ? "bg-green-600 text-white"
+                              : "bg-slate-700/50 text-gray-400 hover:bg-slate-600/50"
+                          }`}
+                          title="Search Web"
+                          disabled={!selectedConversation || loading}
+                        >
+                          <Globe size={16} />
+                        </button>
+                        <button
+                          onClick={() => toggleSearch("youtube")}
+                          className={`p-2 rounded-lg transition-colors ${
+                            search && searchType === "youtube"
+                              ? "bg-green-600 text-white"
+                              : "bg-slate-700/50 text-gray-400 hover:bg-slate-600/50"
+                          }`}
+                          title="Search YouTube"
+                          disabled={!selectedConversation || loading}
+                        >
+                          <Youtube size={16} />
+                        </button>
+                      </div>
                     </div>
+                    {/* Send button - properly aligned horizontally with input */}
+                    <button
+                      onClick={sendMessage}
+                      disabled={!input.trim() || loading || !selectedConversation}
+                      className="w-12 h-12 rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.05] disabled:transform-none flex-shrink-0"
+                    >
+                      <SendHorizontal size={16} className="text-white" />
+                    </button>
                   </div>
-                  <button
-                    onClick={sendMessage}
-                    disabled={!input.trim() || loading || !selectedConversation}
-                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.05] disabled:transform-none flex-shrink-0"
-                  >
-                    <SendHorizontal size={16} className="text-white" />
-                  </button>
                 </div>
               </footer>
             </>

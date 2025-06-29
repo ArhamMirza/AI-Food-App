@@ -2,8 +2,14 @@
 
 import type React from "react"
 import { useState } from "react"
-import { MessageSquare, ChefHat, Plus, Edit3, Check, X, Trash2, ChevronDown, ChevronRight } from "lucide-react"
+import { MessageSquare, ChefHat, Plus, Edit3, Check, X, Trash2, User, Menu } from "lucide-react"
 import type { Conversation, Recipe } from "./types"
+
+// Navigation links data
+const navigationLinks = [
+  { name: "Dashboard", href: "/dashboard", icon: MessageSquare },
+  { name: "Profile", href: "/profile", icon: User },
+]
 
 interface SidebarProps {
   isOpen: boolean
@@ -33,6 +39,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
+  isCollapsed,
   conversations,
   recipes,
   selectedConversation,
@@ -40,6 +47,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   editingTitle,
   editTitle,
   onClose,
+  onToggleCollapse,
   onNewChat,
   onSelectConversation,
   onSelectRecipe,
@@ -69,46 +77,78 @@ const Sidebar: React.FC<SidebarProps> = ({
       `}</style>
 
       <div
-        className={`fixed lg:relative inset-y-0 left-0 z-50 w-80 bg-slate-800/95 backdrop-blur-sm border-r border-slate-700/50 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed lg:relative inset-y-0 left-0 z-50 ${isCollapsed ? "w-20" : "w-80"} bg-slate-800/95 backdrop-blur-sm border-r border-slate-700/50 transform transition-all duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        } lg:w-80 flex flex-col sidebar-scrollable`}
+        } flex flex-col sidebar-scrollable`}
       >
         {/* Sidebar Header */}
         <div className="p-4 border-b border-slate-700/50">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">Food AI</h2>
-            <button
-              onClick={onClose}
-              className="lg:hidden p-2 text-gray-400 hover:text-white rounded-lg hover:bg-slate-700/50 transition-colors"
-            >
-              <X size={20} />
-            </button>
+          <div className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between"}`}>
+            {!isCollapsed && <h2 className="text-lg font-semibold text-white">Food AI</h2>}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onToggleCollapse}
+                className="hidden lg:block p-2 text-gray-400 hover:text-white rounded-lg hover:bg-slate-700/50 transition-colors"
+                title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+              >
+                <Menu size={20} />
+              </button>
+              <button
+                onClick={onClose}
+                className="lg:hidden p-2 text-gray-400 hover:text-white rounded-lg hover:bg-slate-700/50 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
           </div>
         </div>
 
+        {/* Main Navigation */}
+        <div className={`p-4 border-b border-slate-700/50 ${isCollapsed ? "px-2" : ""}`}>
+          <nav className={`space-y-2 ${isCollapsed ? "flex flex-col items-center" : ""}`}>
+            {navigationLinks.map((link) => (
+              <a
+                key={link.name}
+                href={link.href}
+                className={`flex items-center gap-3 px-3 py-2 text-gray-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors ${
+                  isCollapsed ? "w-12 h-12 justify-center p-0" : ""
+                }`}
+                title={isCollapsed ? link.name : undefined}
+              >
+                <link.icon size={isCollapsed ? 20 : 18} />
+                {!isCollapsed && <span className="text-sm font-medium">{link.name}</span>}
+              </a>
+            ))}
+          </nav>
+        </div>
+
         {/* Sidebar Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-6 sidebar-scrollable">
+        <div className={`flex-1 overflow-y-auto space-y-6 sidebar-scrollable ${isCollapsed ? "px-2 py-4" : "p-4"}`}>
           {/* Conversations Section */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
+          <div className={isCollapsed ? "flex flex-col items-center" : ""}>
+            <div className={`flex items-center justify-between mb-3 ${isCollapsed ? "flex-col gap-2" : ""}`}>
               <button
                 onClick={() => setConversationsCollapsed(!conversationsCollapsed)}
-                className="flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+                className={`flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white transition-colors ${
+                  isCollapsed ? "w-12 h-10 justify-center rounded-lg hover:bg-slate-700/50" : ""
+                }`}
+                title={isCollapsed ? `Conversations (${conversations.length})` : undefined}
               >
-                {conversationsCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-                <MessageSquare size={16} />
-                Conversations ({conversations.length})
+                <MessageSquare size={isCollapsed ? 20 : 16} />
+                {!isCollapsed && `Conversations (${conversations.length})`}
               </button>
               <button
                 onClick={onNewChat}
-                className="p-1 text-green-400 hover:bg-green-400/10 rounded transition-colors"
+                className={`p-1 text-green-400 hover:bg-green-400/10 rounded transition-colors ${
+                  isCollapsed ? "w-10 h-10 flex items-center justify-center" : ""
+                }`}
                 title="New Chat"
               >
-                <Plus size={16} />
+                <Plus size={isCollapsed ? 18 : 16} />
               </button>
             </div>
 
-            {!conversationsCollapsed && (
+            {!isCollapsed && !conversationsCollapsed && (
               <div className="space-y-2 max-h-64 overflow-y-auto sidebar-scrollable">
                 {conversations.map((conv) => (
                   <div
@@ -182,17 +222,19 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           {/* Recipes Section */}
-          <div>
+          <div className={isCollapsed ? "flex flex-col items-center" : ""}>
             <button
               onClick={() => setRecipesCollapsed(!recipesCollapsed)}
-              className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-3 hover:text-white transition-colors"
+              className={`flex items-center gap-2 text-sm font-medium text-gray-300 mb-3 hover:text-white transition-colors ${
+                isCollapsed ? "w-12 h-10 justify-center rounded-lg hover:bg-slate-700/50" : ""
+              }`}
+              title={isCollapsed ? `Saved Recipes (${recipes.length})` : undefined}
             >
-              {recipesCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-              <ChefHat size={16} />
-              Saved Recipes ({recipes.length})
+              <ChefHat size={isCollapsed ? 20 : 16} />
+              {!isCollapsed && `Saved Recipes (${recipes.length})`}
             </button>
 
-            {!recipesCollapsed && (
+            {!isCollapsed && !recipesCollapsed && (
               <div className="space-y-2 max-h-64 overflow-y-auto sidebar-scrollable">
                 {recipes.map((recipe) => (
                   <div
