@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, BackgroundTasks
+from fastapi import APIRouter, Depends, BackgroundTasks, Response
 
 from app.models.user import UserCreate, UserResponse
 from app.models.auth import (
@@ -20,26 +20,24 @@ async def signup(
     return await auth_service.create_user(user_data, background_tasks)
 
 @router.post("/login", response_model=TokenResponse)
-async def login(user_data: UserLogin, auth_service: AuthService = Depends()):
-    return await auth_service.authenticate_user(user_data)
+async def login(user_data: UserLogin, response: Response, auth_service: AuthService = Depends()):
+    return await auth_service.authenticate_user(user_data, response)
 
 @router.post("/verify-email")
 async def verify_email(token: str, auth_service: AuthService = Depends()):
     return await auth_service.verify_email_token(token)
 
 @router.post("/google", response_model=TokenResponse)
-async def google_login(request: GoogleAuthRequest, auth_service: AuthService = Depends()):
-    print(request)
-    return await auth_service.google_authenticate(request)
+async def google_login(request: GoogleAuthRequest, response: Response, auth_service: AuthService = Depends()):
+    return await auth_service.google_authenticate(request, response)
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh_token(
+    response: Response,
     token_payload: dict = Depends(get_refresh_token_payload_from_cookie),
     auth_service: AuthService = Depends()
 ):
-    return await auth_service.refresh_access_token(token_payload)
-
-
+    return await auth_service.refresh_access_token(token_payload, response)
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: dict = Depends(get_current_active_user)):
