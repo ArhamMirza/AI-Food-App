@@ -1,4 +1,4 @@
-from fastapi import HTTPException, status, BackgroundTasks
+from fastapi import HTTPException, status, BackgroundTasks, Response
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 import httpx
 from typing import Dict, Any
@@ -24,14 +24,12 @@ class AuthService:
         self.token_serializer = URLSafeTimedSerializer(settings.SECRET_KEY)
     
     async def create_user(self, user_data: UserCreate, background_tasks: BackgroundTasks) -> Dict[str, str]:
-        # Check for duplicate email or username
         if await UserSchema.find_by_email(user_data.email):
             raise HTTPException(status_code=400, detail="Email already registered")
         
         if await UserSchema.find_by_username(user_data.username):
             raise HTTPException(status_code=400, detail="Username already taken")
         
-        # Prepare user data for token (password already hashed)
         hashed_password = get_password_hash(user_data.password)
         token_data = {
             "username": user_data.username,
@@ -39,10 +37,8 @@ class AuthService:
             "password": hashed_password,
         }
         
-        # Encode token
         verification_token = self.token_serializer.dumps(token_data, salt="email-verification")
 
-        # Send verification email
         background_tasks.add_task(
             send_verification_email,
             user_data.email,
@@ -55,7 +51,7 @@ class AuthService:
         }
 
     
-    async def authenticate_user(self, user_data: UserLogin) -> TokenResponse:
+    async def authenticate_user(self, user_data: UserLogin, response: Response) -> TokenResponse:
         user = await UserSchema.find_by_email(user_data.email.lower())
         if not user or not verify_password(user_data.password, user["password"]):
             raise HTTPException(status_code=401, detail="Invalid email or password")
@@ -65,10 +61,20 @@ class AuthService:
         
         access_token = create_access_token(data={"sub": str(user["_id"]), "type":"access"})
         refresh_token = create_refresh_token(data={"sub": str(user["_id"]), "type":"refresh"})
+
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,
+            secure=True,
+            samesite="none",
+            path="/",
+            expires=int(settings.REFRESH_TOKEN_EXPIRE_DAYS) * 24 * 60 * 60
+        )
         
         return TokenResponse(
             access_token=access_token,
-            refresh_token=refresh_token,
+            refresh_token=None,
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
         )
     
@@ -80,14 +86,12 @@ class AuthService:
         except BadSignature:
             raise HTTPException(status_code=400, detail="Invalid verification token")
 
-        # Check again for duplicate email or username before creating
         if await UserSchema.find_by_email(user_data["email"]):
             return {"message": "Email already verified or in use"}
         
         if await UserSchema.find_by_username(user_data["username"]):
             raise HTTPException(status_code=400, detail="Username already taken")
 
-        # Create user now
         user_dict = {
             "username": user_data["username"].lower(),
             "email": user_data["email"].lower(),
@@ -105,25 +109,19 @@ class AuthService:
 
         return {"message": "Email verified and account created successfully"}
 
-
-    async def google_authenticate(self, request: GoogleAuthRequest) -> TokenResponse:
+    async def google_authenticate(self, request: GoogleAuthRequest, response: Response) -> TokenResponse:
         try:
-            # Verify the Firebase ID token
             decoded_token = firebase_auth.verify_id_token(request.token)
-            
-            # Extract user information from the decoded token
             email = decoded_token.get("email")
-            google_id = decoded_token.get("uid")  # Firebase UID
+            google_id = decoded_token.get("uid")
             name = decoded_token.get("name", "")
             
             if not email:
                 raise HTTPException(status_code=400, detail="Email not provided by Firebase")
             
-            # Check if user exists
             user = await UserSchema.find_by_email(email.lower())
             
             if not user:
-                # Create new user
                 username = email.split("@")[0].lower()
                 counter = 1
                 original_username = username
@@ -135,7 +133,7 @@ class AuthService:
                     "username": username,
                     "email": email.lower(),
                     "password": None,
-                    "is_email_verified": True,  # Firebase handles email verification
+                    "is_email_verified": True,
                     "role": UserRole.USER,
                     "preferences": {},
                     "saved_recipes": [],
@@ -148,10 +146,9 @@ class AuthService:
                 
                 user = await UserSchema.create(user_dict)
             else:
-                # Update existing user with Firebase UID if not set
                 if not user.get("firebase_uid"):
                     await UserSchema.update(
-                        str(user["_id"]),  # Convert ObjectId to string if needed
+                        str(user["_id"]),
                         {
                             "firebase_uid": google_id,
                             "auth_provider": "firebase"
@@ -160,10 +157,20 @@ class AuthService:
 
             access_token = create_access_token(data={"sub": str(user["_id"]),"type":"access"})
             refresh_token = create_refresh_token(data={"sub": str(user["_id"]),"type":"refresh"})
+
+            response.set_cookie(
+                key="refresh_token",
+                value=refresh_token,
+                httponly=True,
+                secure=True,
+                samesite="none",
+                path="/",
+                expires=int(settings.REFRESH_TOKEN_EXPIRE_DAYS) * 24 * 60 * 60
+            )
             
             return TokenResponse(
                 access_token=access_token,
-                refresh_token=refresh_token,
+                refresh_token=None,
                 expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
             )
             
@@ -171,12 +178,8 @@ class AuthService:
             raise HTTPException(status_code=400, detail=f"Invalid Firebase token: {str(e)}")
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Authentication failed: {str(e)}")
-        
-    async def refresh_access_token(self, token_payload: dict) -> TokenResponse:
-        """
-        Refresh access token using a valid refresh token payload.
-        """
 
+    async def refresh_access_token(self, token_payload: dict, response: Response) -> TokenResponse:
         token_type = token_payload.get("type")
         user_id = token_payload.get("sub")
 
@@ -199,13 +202,22 @@ class AuthService:
                 detail="User not found"
             )
 
-        # Create new tokens
         access_token = create_access_token(data={"sub": str(user["_id"]), "type": "access"})
         refresh_token = create_refresh_token(data={"sub": str(user["_id"]), "type": "refresh"})
 
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,
+            secure=True,
+            samesite="none",
+            path="/",
+            expires=int(settings.REFRESH_TOKEN_EXPIRE_DAYS) * 24 * 60 * 60
+        )
+
         return TokenResponse(
             access_token=access_token,
-            refresh_token=refresh_token,
+            refresh_token=None,
             token_type="bearer",
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
         )

@@ -1,9 +1,9 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { Eye, EyeOff, Mail, Lock, User, ChefHat, Sparkles, X, CheckCircle } from "lucide-react"
-import { signInWithPopup } from "firebase/auth"
+import { signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth"
 import { auth, googleProvider } from "../firebase/firebase"
 import { useAppDispatch } from "../redux/hooks"
 import { fetchUserInfo, setError } from "../redux/slices/userSlice"
@@ -25,13 +25,6 @@ interface FormErrors {
   general?: string
 }
 
-// Cookie utility functions
-const setCookie = (name: string, value: string, days = 7) => {
-  const expires = new Date()
-  expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000)
-  document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;secure;samesite=strict`
-}
-
 const AuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
@@ -49,156 +42,17 @@ const AuthPage: React.FC = () => {
 
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
+  // const userError = useAppSelector((state) => state.user.error)
   const { setAllowOnboarding } = useOnboarding()
 
   const BASE_URL = import.meta.env.VITE_API_URL
 
-  const handleAuthSuccess = (data: any) => {
-    localStorage.setItem("access_token", data.access_token)
-    if (data.refresh_token) {
-      setCookie("refresh_token", data.refresh_token, 30)
-    }
-  }
-
-  const handleFirebaseAuthSuccess = useCallback(
-    async (user: any) => {
-      try {
-        console.log("[AUTH] Processing Firebase auth success for:", user.email)
-        console.log("[AUTH] User object:", {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          emailVerified: user.emailVerified,
-        })
-
-        setIsLoading(true)
-        setErrors({})
-
-        // Step 1: Get ID Token
-        console.log("[AUTH] Step 1: Getting ID token...")
-        const idToken = await user.getIdToken()
-        console.log("[AUTH] ID token obtained, length:", idToken.length)
-
-        // Step 2: Call backend
-        console.log("[AUTH] Step 2: Calling backend API...")
-        console.log("[AUTH] Backend URL:", `${BASE_URL}/auth/google`)
-        console.log("[AUTH] Request payload:", { token: idToken.substring(0, 50) + "..." })
-
-        const backendResponse = await fetch(`${BASE_URL}/auth/google`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({ token: idToken }),
-        })
-
-        console.log("[AUTH] Backend response status:", backendResponse.status)
-        console.log("[AUTH] Backend response headers:", Object.fromEntries(backendResponse.headers.entries()))
-
-        if (!backendResponse.ok) {
-          let errorData
-          try {
-            errorData = await backendResponse.json()
-            console.log("[AUTH] Backend error data:", errorData)
-          } catch (parseError) {
-            console.log("[AUTH] Could not parse backend error response:", parseError)
-            errorData = { detail: `HTTP ${backendResponse.status}: ${backendResponse.statusText}` }
-          }
-
-          throw new Error(errorData.detail || `HTTP ${backendResponse.status}: Authentication failed`)
-        }
-
-        // Step 3: Parse backend response
-        console.log("[AUTH] Step 3: Parsing backend response...")
-        const data = await backendResponse.json()
-        console.log("[AUTH] Backend success data:", {
-          hasAccessToken: !!data.access_token,
-          hasRefreshToken: !!data.refresh_token,
-          accessTokenLength: data.access_token?.length || 0,
-        })
-
-        // Step 4: Store tokens
-        console.log("[AUTH] Step 4: Storing tokens...")
-        handleAuthSuccess(data)
-
-        // Step 5: Fetch user info
-        console.log("[AUTH] Step 5: Fetching user info...")
-        const userInfo = await dispatch(fetchUserInfo(data.access_token)).unwrap()
-        console.log("[AUTH] User info fetched:", {
-          email: userInfo.email,
-          createdAt: userInfo.created_at,
-          hasPreferences: !!userInfo.preferences,
-        })
-
-        // Step 6: Check onboarding requirements
-        console.log("[AUTH] Step 6: Checking onboarding requirements...")
-        const createdAt = new Date(userInfo.created_at)
-        const now = new Date()
-        const diffInMinutes = (now.getTime() - createdAt.getTime()) / 1000 / 60
-        console.log("[AUTH] Account age in minutes:", diffInMinutes)
-
-        const preferences = userInfo.preferences
-        const preferencesAreEmpty =
-          (!preferences.dietary_restrictions || preferences.dietary_restrictions.length === 0) &&
-          (!preferences.allergies || preferences.allergies.length === 0) &&
-          (!preferences.favorite_cuisines || preferences.favorite_cuisines.length === 0)
-
-        console.log("[AUTH] Preferences empty:", preferencesAreEmpty)
-
-        const shouldOnboard = diffInMinutes - 300 < 5 && preferencesAreEmpty
-        console.log("[AUTH] Should onboard:", shouldOnboard)
-
-        // Step 7: Navigate
-        console.log("[AUTH] Step 7: Navigating...")
-        if (shouldOnboard) {
-          setAllowOnboarding(true)
-          console.log("[AUTH] Navigating to onboarding...")
-          navigate("/onboarding")
-        } else {
-          console.log("[AUTH] Navigating to dashboard...")
-          navigate("/dashboard")
-        }
-
-        console.log("[AUTH] Authentication flow completed successfully!")
-      } catch (error) {
-        console.error("[AUTH] Firebase auth success handler error:", error)
-        console.error("[AUTH] Error stack:", error instanceof Error ? error.stack : "No stack trace")
-
-        let errorMessage = "Authentication failed"
-
-        if (error instanceof Error) {
-          errorMessage = error.message
-
-          // Check for specific error types
-          if (error.message.includes("fetch")) {
-            errorMessage =
-              "Network error: Could not connect to authentication server. Please check your internet connection."
-          } else if (error.message.includes("HTTP 401")) {
-            errorMessage = "Authentication token was rejected by the server. Please try again."
-          } else if (error.message.includes("HTTP 403")) {
-            errorMessage = "Access denied. Please contact support if this continues."
-          } else if (error.message.includes("HTTP 500")) {
-            errorMessage = "Server error. Please try again in a few moments."
-          } else if (error.message.includes("JSON")) {
-            errorMessage = "Server response error. Please try again."
-          }
-        }
-
-        console.log("[AUTH] Final error message:", errorMessage)
-        dispatch(setError(errorMessage))
-        setErrors({ general: errorMessage })
-      } finally {
-        setIsLoading(false)
-      }
-    },
-    [BASE_URL, dispatch, navigate, setAllowOnboarding],
-  )
 
   useEffect(() => {
-    // Check Firebase configuration
+    // Check if Firebase is properly configured
     const checkFirebaseConfig = () => {
       const requiredEnvVars = ["VITE_FIREBASE_API_KEY", "VITE_FIREBASE_AUTH_DOMAIN", "VITE_FIREBASE_PROJECT_ID"]
+
       const missingVars = requiredEnvVars.filter((varName) => !import.meta.env[varName])
 
       if (missingVars.length > 0) {
@@ -207,14 +61,97 @@ const AuthPage: React.FC = () => {
         return false
       }
 
-      console.log("Firebase config check passed")
-      console.log("Auth domain:", import.meta.env.VITE_FIREBASE_AUTH_DOMAIN)
       setFirebaseLoaded(true)
       return true
     }
 
     checkFirebaseConfig()
+
+    // Check for redirect result (in case user was redirected back from Google)
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          handleFirebaseAuthSuccess(result.user)
+        }
+      })
+      .catch((error) => {
+        console.error("Redirect result error:", error)
+        setErrors({ general: "Authentication redirect failed" })
+      })
   }, [])
+
+  const handleAuthSuccess = (data: any) => {
+    // Store access token in localStorage (short-lived)
+    localStorage.setItem("access_token", data.access_token)
+  }
+
+  const handleFirebaseAuthSuccess = async (user: any) => {
+    try {
+      setIsLoading(true)
+      setErrors({})
+
+      // Get the Firebase ID token
+      const idToken = await user.getIdToken()
+
+      // Send the Firebase ID token to your backend with credentials to set secure cookies
+      const backendResponse = await fetch(`${BASE_URL}/auth/google`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // Important: This allows cookies to be set
+        body: JSON.stringify({ token: idToken }),
+      })
+
+      if (!backendResponse.ok) {
+        const errorData = await backendResponse.json().catch(() => ({}))
+        throw new Error(errorData.detail || `HTTP ${backendResponse.status}: Authentication failed`)
+      }
+
+      const data = await backendResponse.json()
+      console.log(data)
+
+      // Handle token storage
+      handleAuthSuccess(data)
+
+      // Fetch user info and redirect
+      const userInfo = await dispatch(fetchUserInfo(data.access_token)).unwrap()
+
+      // Check if user needs onboarding
+
+      const createdAt = new Date(userInfo.created_at);
+      const now = new Date();
+      const diffInMinutes = (now.getTime() - createdAt.getTime()) / 1000 / 60;
+      console.log(diffInMinutes)
+
+      // You decide what "empty preferences" means
+      const preferences = userInfo.preferences;
+      const preferencesAreEmpty =
+        (!preferences.dietary_restrictions || preferences.dietary_restrictions.length === 0) &&
+        (!preferences.allergies || preferences.allergies.length === 0) &&
+        (!preferences.favorite_cuisines || preferences.favorite_cuisines.length === 0)
+
+      const shouldOnboard = (diffInMinutes-300) < 5 && preferencesAreEmpty;
+
+
+      if (shouldOnboard) {
+        setAllowOnboarding(true)
+        navigate("/onboarding")
+      } else {
+        navigate("/dashboard")
+      }
+
+
+
+    } catch (error) {
+      console.error("Firebase auth success handler error:", error)
+      const errorMessage = error instanceof Error ? error.message : "Authentication failed"
+      dispatch(setError(errorMessage))
+      setErrors({ general: errorMessage })
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {}
@@ -267,17 +204,21 @@ const AuthPage: React.FC = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include",
+        credentials: "include", // Important: This allows cookies to be set
         body: JSON.stringify(payload),
       })
 
       const data = await response.json()
+      console.log(data.access_token)
 
       if (response.ok) {
         if (isLogin) {
+          // Handle token storage
           handleAuthSuccess(data)
+
           const userInfo = await dispatch(fetchUserInfo(data.access_token)).unwrap()
 
+          // Check if user needs onboarding
           if (
             userInfo.preferences?.diet === "none" ||
             !userInfo.preferences?.allergies ||
@@ -315,36 +256,49 @@ const AuthPage: React.FC = () => {
     }
 
     try {
-      console.log("[AUTH] Starting Google popup auth")
-      console.log("[AUTH] User agent:", navigator.userAgent)
-      console.log("[AUTH] Base URL:", BASE_URL)
-
       setIsLoading(true)
       setErrors({})
 
-      // Clear any existing auth state
-      if (auth.currentUser) {
-        await auth.signOut()
-        console.log("[AUTH] Cleared existing auth state")
+      // Try popup first, fallback to redirect on mobile or if popup is blocked
+      try {
+        const result = await signInWithPopup(auth, googleProvider)
+        await handleFirebaseAuthSuccess(result.user)
+      } catch (popupError: any) {
+        console.error("Popup error:", popupError)
+
+        // Handle specific Firebase Auth errors
+        if (popupError.code === "auth/operation-not-allowed") {
+          setErrors({
+            general: "Google authentication is not enabled. Please check your Firebase project settings.",
+          })
+          return
+        }
+
+        if (popupError.code === "auth/unauthorized-domain") {
+          setErrors({
+            general: "This domain is not authorized. Please add it to your Firebase project settings.",
+          })
+          return
+        }
+
+        // If popup is blocked or fails, try redirect
+        if (
+          popupError.code === "auth/popup-blocked" ||
+          popupError.code === "auth/popup-closed-by-user" ||
+          popupError.code === "auth/cancelled-popup-request"
+        ) {
+          console.log("Popup blocked, trying redirect...")
+          await signInWithRedirect(auth, googleProvider)
+          // The redirect result will be handled in useEffect
+        } else {
+          throw popupError
+        }
       }
-
-      console.log("[AUTH] Initiating popup...")
-      const result = await signInWithPopup(auth, googleProvider)
-      console.log("[AUTH] Popup success:", result.user.email)
-      console.log("[AUTH] Popup result:", {
-        uid: result.user.uid,
-        email: result.user.email,
-        displayName: result.user.displayName,
-      })
-
-      await handleFirebaseAuthSuccess(result.user)
     } catch (error: any) {
-      console.error("[AUTH] Google auth error:", error)
-      console.error("[AUTH] Error code:", error.code)
-      console.error("[AUTH] Error message:", error.message)
-
+      console.error("Google auth error:", error)
       let errorMessage = "Google authentication failed"
 
+      // Handle specific Firebase Auth error codes
       switch (error.code) {
         case "auth/operation-not-allowed":
           errorMessage = "Google authentication is not enabled in Firebase. Please enable it in your Firebase console."
@@ -353,13 +307,10 @@ const AuthPage: React.FC = () => {
           errorMessage = "This domain is not authorized. Please add it to your Firebase project settings."
           break
         case "auth/popup-blocked":
-          errorMessage = "Popup was blocked by your browser. Please allow popups for this site and try again."
+          errorMessage = "Popup was blocked. Please allow popups and try again."
           break
         case "auth/popup-closed-by-user":
-          errorMessage = "Authentication was cancelled. Please try again."
-          break
-        case "auth/cancelled-popup-request":
-          errorMessage = "Authentication request was cancelled. Please try again."
+          errorMessage = "Authentication was cancelled"
           break
         case "auth/network-request-failed":
           errorMessage = "Network error. Please check your connection and try again."
@@ -397,39 +348,35 @@ const AuthPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#2A1B3D] to-[#1A1A2E] flex items-center justify-center p-3 sm:p-4 relative overflow-hidden">
-      {/* Background decorations - reduced on mobile */}
-      <div className="absolute inset-0 opacity-5 sm:opacity-10 pointer-events-none">
-        <div className="absolute top-10 sm:top-20 left-10 sm:left-20 w-32 h-32 sm:w-72 sm:h-72 bg-[#3A2F5F] rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
-        <div className="absolute top-20 sm:top-40 right-10 sm:right-20 w-32 h-32 sm:w-72 sm:h-72 bg-[#4A406F] rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
-        <div className="absolute -bottom-4 sm:-bottom-8 left-40 sm:left-80 w-32 h-32 sm:w-72 sm:h-72 bg-[#5A517F] rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
+    <div className="min-h-screen bg-gradient-to-br from-[#2A1B3D] to-[#1A1A2E] flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute inset-0 opacity-10 pointer-events-none">
+        <div className="absolute top-20 left-20 w-72 h-72 bg-[#3A2F5F] rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+        <div className="absolute top-40 right-20 w-72 h-72 bg-[#4A406F] rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-80 w-72 h-72 bg-[#5A517F] rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
       </div>
 
-      {/* Email Verification Popup - Better mobile positioning */}
       {showEmailVerificationPopup && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-[#2A1B3D]/50 backdrop-blur-sm border border-[#3A2F5F] rounded-2xl p-6 sm:p-8 max-w-md w-full relative animate-in fade-in zoom-in duration-300 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#2A1B3D]/50 backdrop-blur-sm border border-[#3A2F5F] rounded-2xl p-8 max-w-md w-full relative animate-in fade-in zoom-in duration-300">
             <button
               onClick={closeEmailVerificationPopup}
-              className="absolute top-3 sm:top-4 right-3 sm:right-4 text-gray-400 hover:text-[#4CAF50] transition-colors p-1"
-              aria-label="Close popup"
+              className="absolute top-4 right-4 text-gray-400 hover:text-[#4CAF50] transition-colors"
             >
-              <X className="w-5 h-5 sm:w-6 sm:h-6" />
+              <X className="w-6 h-6" />
             </button>
-            <div className="flex justify-center mb-4 sm:mb-6">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-[#4CAF50]/20 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-[#4CAF50]" />
+            <div className="flex justify-center mb-6">
+              <div className="w-16 h-16 bg-[#4CAF50]/20 rounded-full flex items-center justify-center">
+                <CheckCircle className="w-8 h-8 text-[#4CAF50]" />
               </div>
             </div>
             <div className="text-center">
-              <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4">Check Your Email</h3>
-              <p className="text-gray-300 mb-4 sm:mb-6 leading-relaxed text-sm sm:text-base">
-                We've sent a verification link to{" "}
-                <span className="text-[#4CAF50] font-medium break-all">{formData.email}</span>. Please check your email
-                and click the verification link to activate your account.
+              <h3 className="text-2xl font-bold text-white mb-4">Check Your Email</h3>
+              <p className="text-gray-300 mb-6 leading-relaxed">
+                We've sent a verification link to <span className="text-[#4CAF50] font-medium">{formData.email}</span>.
+                Please check your email and click the verification link to activate your account.
               </p>
-              <div className="bg-[#2A1B3D]/70 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
-                <p className="text-gray-400 text-xs sm:text-sm">
+              <div className="bg-[#2A1B3D]/70 rounded-lg p-4 mb-6">
+                <p className="text-gray-400 text-sm">
                   <strong className="text-gray-300">Didn't receive the email?</strong>
                   <br />
                   Check your spam folder or contact support if you need help.
@@ -437,7 +384,7 @@ const AuthPage: React.FC = () => {
               </div>
               <button
                 onClick={closeEmailVerificationPopup}
-                className="w-full bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] hover:from-[#45a049] hover:to-[#5cb860] text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] shadow-lg hover:shadow-[#4CAF50]/25 text-sm sm:text-base"
+                className="w-full bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] hover:from-[#45a049] hover:to-[#5cb860] text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] shadow-lg hover:shadow-[#4CAF50]/25"
               >
                 Got it, thanks!
               </button>
@@ -447,28 +394,25 @@ const AuthPage: React.FC = () => {
       )}
 
       <div className="relative z-10 w-full max-w-md">
-        {/* Header - Adjusted spacing for mobile */}
-        <div className="text-center mb-8 sm:mb-12">
-          <div className="flex items-center justify-center mb-4 sm:mb-6">
+        <div className="text-center mb-12">
+          <div className="flex items-center justify-center mb-6">
             <div className="relative">
-              <ChefHat className="w-10 h-10 sm:w-12 sm:h-12 text-[#4CAF50]" />
-              <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-[#66BB6A] absolute -top-1 -right-1 animate-pulse" />
+              <ChefHat className="w-12 h-12 text-[#4CAF50]" />
+              <Sparkles className="w-6 h-6 text-[#66BB6A] absolute -top-1 -right-1 animate-pulse" />
             </div>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Food AI Assistant</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Food AI Assistant</h1>
         </div>
 
-        {/* Main form container - Better mobile padding */}
-        <div className="bg-[#1A1A2E] backdrop-blur-md border border-[#3A2F5F] rounded-2xl p-6 sm:p-8 shadow-2xl bg-opacity-90">
-          <div className="text-center mb-6 sm:mb-8">
-            <h2 className="text-xl sm:text-2xl font-bold text-white">{isLogin ? "Sign In" : "Create Account"}</h2>
-            <p className="text-gray-400 mt-2 text-sm sm:text-base">
+        <div className="bg-[#1A1A2E] backdrop-blur-md border border-[#3A2F5F] rounded-2xl p-8 shadow-2xl transform translate-y-[-20px] bg-opacity-90">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-white">{isLogin ? "Sign In" : "Create Account"}</h2>
+            <p className="text-gray-400 mt-2">
               {isLogin ? "Welcome back! Enter your credentials to continue" : "Join us and start your culinary journey"}
             </p>
           </div>
 
-          <div className="space-y-4 sm:space-y-6">
-            {/* Username field for signup */}
+          <div className="space-y-6">
             {!isLogin && (
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-300">Username</label>
@@ -479,21 +423,18 @@ const AuthPage: React.FC = () => {
                     name="username"
                     value={formData.username || ""}
                     onChange={handleInputChange}
-                    className={`w-full pl-10 pr-4 py-3 bg-[#2A1B3D]/50 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 text-base ${
+                    className={`w-full pl-10 pr-4 py-3 bg-[#2A1B3D]/50 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 ${
                       errors.username
                         ? "border-red-500 focus:ring-red-500"
                         : "border-[#3A2F5F] focus:ring-[#4CAF50] focus:border-[#4CAF50]"
                     }`}
                     placeholder="Enter your username"
-                    autoCapitalize="none"
-                    autoCorrect="off"
                   />
                 </div>
                 {errors.username && <p className="text-red-400 text-sm">{errors.username}</p>}
               </div>
             )}
 
-            {/* Email field */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-300">Email Address</label>
               <div className="relative">
@@ -503,21 +444,17 @@ const AuthPage: React.FC = () => {
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className={`w-full pl-10 pr-4 py-3 bg-[#2A1B3D]/50 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 text-base ${
+                  className={`w-full pl-10 pr-4 py-3 bg-[#2A1B3D]/50 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 ${
                     errors.email
                       ? "border-red-500 focus:ring-red-500"
                       : "border-[#3A2F5F] focus:ring-[#4CAF50] focus:border-[#4CAF50]"
                   }`}
                   placeholder="Enter your email"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  autoComplete="email"
                 />
               </div>
               {errors.email && <p className="text-red-400 text-sm">{errors.email}</p>}
             </div>
 
-            {/* Password field */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-300">Password</label>
               <div className="relative">
@@ -527,19 +464,17 @@ const AuthPage: React.FC = () => {
                   name="password"
                   value={formData.password}
                   onChange={handleInputChange}
-                  className={`w-full pl-10 pr-12 py-3 bg-[#2A1B3D]/50 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 text-base ${
+                  className={`w-full pl-10 pr-12 py-3 bg-[#2A1B3D]/50 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 ${
                     errors.password
                       ? "border-red-500 focus:ring-red-500"
                       : "border-[#3A2F5F] focus:ring-[#4CAF50] focus:border-[#4CAF50]"
                   }`}
                   placeholder="Enter your password"
-                  autoComplete={isLogin ? "current-password" : "new-password"}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 text-gray-400 hover:text-[#4CAF50] transition-colors p-1"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-3 top-3 text-gray-400 hover:text-[#4CAF50] transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -547,7 +482,6 @@ const AuthPage: React.FC = () => {
               {errors.password && <p className="text-red-400 text-sm">{errors.password}</p>}
             </div>
 
-            {/* Confirm password field for signup */}
             {!isLogin && (
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-300">Confirm Password</label>
@@ -558,19 +492,17 @@ const AuthPage: React.FC = () => {
                     name="confirmPassword"
                     value={formData.confirmPassword || ""}
                     onChange={handleInputChange}
-                    className={`w-full pl-10 pr-12 py-3 bg-[#2A1B3D]/50 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 text-base ${
+                    className={`w-full pl-10 pr-12 py-3 bg-[#2A1B3D]/50 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 transition-all duration-200 ${
                       errors.confirmPassword
                         ? "border-red-500 focus:ring-red-500"
                         : "border-[#3A2F5F] focus:ring-[#4CAF50] focus:border-[#4CAF50]"
                     }`}
                     placeholder="Confirm your password"
-                    autoComplete="new-password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-3 text-gray-400 hover:text-[#4CAF50] transition-colors p-1"
-                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                    className="absolute right-3 top-3 text-gray-400 hover:text-[#4CAF50] transition-colors"
                   >
                     {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -579,18 +511,16 @@ const AuthPage: React.FC = () => {
               </div>
             )}
 
-            {/* Error display */}
-            {errors.general && (
+            {/* {(errors.general || userError) && (
               <div className="bg-red-900/50 border border-red-500 rounded-lg p-3">
-                <p className="text-red-400 text-sm">{errors.general}</p>
+                <p className="text-red-400 text-sm">{errors.general || userError}</p>
               </div>
-            )}
+            )} */}
 
-            {/* Submit button */}
             <button
               onClick={handleSubmit}
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] hover:from-[#45a049] hover:to-[#5cb860] text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg hover:shadow-[#4CAF50]/25 text-base"
+              className="w-full bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] hover:from-[#45a049] hover:to-[#5cb860] text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg hover:shadow-[#4CAF50]/25"
             >
               {isLoading ? (
                 <div className="flex items-center justify-center">
@@ -604,8 +534,7 @@ const AuthPage: React.FC = () => {
               )}
             </button>
 
-            {/* Divider */}
-            <div className="relative my-4 sm:my-6">
+            <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-[#3A2F5F]"></div>
               </div>
@@ -614,14 +543,13 @@ const AuthPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Google auth button */}
             <button
               type="button"
               onClick={handleGoogleAuth}
               disabled={isLoading || !firebaseLoaded}
-              className="w-full bg-white hover:bg-gray-50 text-gray-900 font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg flex items-center justify-center border border-gray-300 text-base"
+              className="w-full bg-white hover:bg-gray-50 text-gray-900 font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg flex items-center justify-center border border-gray-300"
             >
-              <svg className="w-5 h-5 mr-2 flex-shrink-0" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -643,9 +571,8 @@ const AuthPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Toggle login/signup */}
           <div className="mt-6 text-center">
-            <p className="text-gray-400 text-sm sm:text-base">
+            <p className="text-gray-400">
               {isLogin ? "Don't have an account? " : "Already have an account? "}
               <button
                 onClick={() => setIsLogin(!isLogin)}
@@ -656,7 +583,6 @@ const AuthPage: React.FC = () => {
             </p>
           </div>
 
-          {/* Forgot password link */}
           {isLogin && (
             <div className="mt-4 text-center">
               <a href="#" className="text-[#4CAF50] hover:text-[#66BB6A] text-sm transition-colors">
@@ -666,8 +592,7 @@ const AuthPage: React.FC = () => {
           )}
         </div>
 
-        {/* Terms and privacy */}
-        <p className="text-center text-gray-500 text-xs mt-6 px-4">
+        <p className="text-center text-gray-500 text-xs mt-6">
           By {isLogin ? "signing in" : "creating an account"}, you agree to our{" "}
           <a href="#" className="text-[#4CAF50] hover:text-[#66BB6A] transition-colors">
             Terms of Service

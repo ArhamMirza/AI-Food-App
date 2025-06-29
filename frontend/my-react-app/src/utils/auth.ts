@@ -1,7 +1,7 @@
 let accessToken = localStorage.getItem("access_token") || ""
 
 const refreshAccessToken = async () => {
-  const res = await fetch("http://localhost:8000/api/v1/auth/refresh", {
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/refresh`, {
     method: "POST",
     credentials: "include", // important!
   })

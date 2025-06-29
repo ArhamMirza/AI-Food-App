@@ -1,111 +1,130 @@
-import React, { useState, useEffect } from 'react';
-import { ChefHat, Sparkles, Bot, Utensils, BookOpen, Users, Star, ArrowRight, Menu, X, Play } from 'lucide-react';
+"use client"
+
+import type React from "react"
+import { useState, useEffect } from "react"
+import { ChefHat, Sparkles, Bot, Utensils, BookOpen, Users, Menu, X, ArrowRight } from "lucide-react"
+import { useAppSelector } from "../redux/hooks"
 
 const HomeLandingPage: React.FC = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [scrollY, setScrollY] = useState(0)
+
+  const user = useAppSelector((state) => state.user.user)
 
   useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    const handleScroll = () => setScrollY(window.scrollY)
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
+
+  const handleGetStarted = () => {
+    if (user) {
+      window.location.href = "/dashboard"
+    } else {
+      window.location.href = "/auth"
+    }
+  }
 
   const features = [
     {
-      icon: <Bot className="w-8 h-8" />,
+      icon: <Bot className="w-6 h-6 sm:w-8 sm:h-8" />,
       title: "AI-Powered Recipes",
-      description: "Get personalized recipe suggestions based on your preferences, dietary restrictions, and available ingredients."
+      description:
+        "Get personalized recipe suggestions based on your preferences, dietary restrictions, and available ingredients.",
     },
     {
-      icon: <Utensils className="w-8 h-8" />,
+      icon: <Utensils className="w-6 h-6 sm:w-8 sm:h-8" />,
       title: "Smart Meal Planning",
-      description: "Plan your weekly meals effortlessly with our intelligent meal planning system that considers your schedule."
+      description:
+        "Plan your weekly meals effortlessly with our intelligent meal planning system that considers your schedule.",
     },
     {
-      icon: <BookOpen className="w-8 h-8" />,
+      icon: <BookOpen className="w-6 h-6 sm:w-8 sm:h-8" />,
       title: "Cooking Guidance",
-      description: "Step-by-step cooking instructions with tips and techniques to help you master any dish."
+      description: "Step-by-step cooking instructions with tips and techniques to help you master any dish.",
     },
     {
-      icon: <Users className="w-8 h-8" />,
+      icon: <Users className="w-6 h-6 sm:w-8 sm:h-8" />,
       title: "Community Recipes",
-      description: "Share and discover amazing recipes from our community of food enthusiasts worldwide."
-    }
-  ];
-
-  const testimonials = [
-    {
-      name: "Sarah Johnson",
-      role: "Home Chef",
-      content: "This AI assistant has completely transformed how I cook. I discover new recipes every day!",
-      rating: 5
+      description: "Share and discover amazing recipes from our community of food enthusiasts worldwide.",
     },
-    {
-      name: "Mike Chen",
-      role: "Food Blogger",
-      content: "The personalized suggestions are incredible. It's like having a professional chef as my assistant.",
-      rating: 5
-    },
-    {
-      name: "Emma Davis",
-      role: "Busy Parent",
-      content: "Meal planning used to stress me out. Now it's the easiest part of my week!",
-      rating: 5
-    }
-  ];
+  ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#2A1B3D] to-[#1A1A2E] text-white overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-hidden">
+      <style>{`
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+      `}</style>
+
       {/* Animated Background */}
       <div className="fixed inset-0 opacity-10 pointer-events-none">
-        <div className="absolute top-20 left-20 w-96 h-96 bg-[#3A2F5F] rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-80 h-80 bg-[#4A406F] rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
-        <div className="absolute bottom-20 left-1/2 w-72 h-72 bg-[#5A517F] rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
+        <div className="absolute top-20 left-20 w-72 h-72 sm:w-96 sm:h-96 bg-slate-800 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+        <div className="absolute top-40 right-20 w-64 h-64 sm:w-80 sm:h-80 bg-purple-800 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-2000"></div>
+        <div className="absolute bottom-20 left-1/2 w-60 h-60 sm:w-72 sm:h-72 bg-emerald-800 rounded-full mix-blend-multiply filter blur-xl animate-pulse animation-delay-4000"></div>
       </div>
 
       {/* Navigation */}
-      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrollY > 50 ? 'bg-[#1A1A2E]/80 backdrop-blur-sm border-b border-[#3A2F5F]' : ''}`}>
+      <nav
+        className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrollY > 50 ? "bg-slate-900/80 backdrop-blur-sm border-b border-slate-700/50" : ""}`}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex items-center space-x-2">
               <div className="relative">
-                <ChefHat className="w-8 h-8 text-[#4CAF50]" />
-                <Sparkles className="w-4 h-4 text-[#66BB6A] absolute -top-1 -right-1 animate-pulse" />
+                <ChefHat className="w-7 h-7 sm:w-8 sm:h-8 text-green-400" />
+                <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-400 absolute -top-1 -right-1 animate-pulse" />
               </div>
-              <span className="text-xl font-bold">Food AI</span>
+              <span className="text-lg sm:text-xl font-bold">Food AI</span>
             </div>
 
             {/* Desktop Menu */}
-            <div className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-gray-300 hover:text-[#4CAF50] transition-colors">Features</a>
-              <a href="#how-it-works" className="text-gray-300 hover:text-[#4CAF50] transition-colors">How It Works</a>
-              <a href="#testimonials" className="text-gray-300 hover:text-[#4CAF50] transition-colors">Reviews</a>
-              <button className="bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] hover:from-[#45a049] hover:to-[#5cb860] px-6 py-2 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105">
-                Get Started
+            <div className="hidden md:flex items-center space-x-6">
+              <a href="#features" className="text-gray-300 hover:text-green-400 transition-colors text-sm">
+                Features
+              </a>
+              <button
+                onClick={handleGetStarted}
+                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 px-6 py-2 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 text-sm"
+              >
+                {user ? "Go to Dashboard" : "Get Started"}
               </button>
             </div>
 
             {/* Mobile Menu Button */}
-            <button 
-              className="md:hidden text-gray-300 hover:text-[#4CAF50]"
+            <button
+              className="md:hidden text-gray-300 hover:text-green-400 p-2"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
-              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden bg-[#1A1A2E]/95 backdrop-blur-sm border-t border-[#3A2F5F]">
+          <div className="md:hidden bg-slate-900/95 backdrop-blur-sm border-t border-slate-700/50">
             <div className="px-4 py-4 space-y-4">
-              <a href="#features" className="block text-gray-300 hover:text-[#4CAF50] transition-colors">Features</a>
-              <a href="#how-it-works" className="block text-gray-300 hover:text-[#4CAF50] transition-colors">How It Works</a>
-              <a href="#testimonials" className="block text-gray-300 hover:text-[#4CAF50] transition-colors">Reviews</a>
-              <button className="w-full bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] hover:from-[#45a049] hover:to-[#5cb860] px-6 py-2 rounded-lg font-semibold transition-all duration-200">
-                Get Started
+              <a
+                href="#features"
+                className="block text-gray-300 hover:text-green-400 transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Features
+              </a>
+              <button
+                onClick={() => {
+                  setIsMenuOpen(false)
+                  handleGetStarted()
+                }}
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 px-6 py-2 rounded-lg font-semibold transition-all duration-200 text-sm"
+              >
+                {user ? "Go to Dashboard" : "Get Started"}
               </button>
             </div>
           </div>
@@ -113,138 +132,79 @@ const HomeLandingPage: React.FC = () => {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-24 pb-20 px-4 text-center">
+      <section className="relative pt-20 sm:pt-24 pb-16 sm:pb-20 px-4 text-center">
         <div className="max-w-6xl mx-auto">
-          <div className="flex justify-center mb-8">
+          <div className="flex justify-center mb-6 sm:mb-8">
             <div className="relative">
-              <div className="w-24 h-24 bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] rounded-full flex items-center justify-center shadow-2xl shadow-[#4CAF50]/25">
-                <ChefHat className="w-12 h-12 text-white" />
+              <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl shadow-green-500/25">
+                <ChefHat className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white" />
               </div>
-              <Sparkles className="w-8 h-8 text-[#66BB6A] absolute -top-2 -right-2 animate-pulse" />
+              <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-emerald-400 absolute -top-1 -right-1 sm:-top-2 sm:-right-2 animate-pulse" />
             </div>
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
             Your Personal
-            <span className="text-[#4CAF50] block mt-2">AI Chef Assistant</span>
+            <span className="text-green-400 block mt-1 sm:mt-2">AI Chef Assistant</span>
           </h1>
 
-          <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed">
-            Discover personalized recipes, plan meals effortlessly, and elevate your cooking game with the power of artificial intelligence.
+          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-300 mb-8 sm:mb-10 md:mb-12 max-w-3xl mx-auto leading-relaxed px-4">
+            Discover personalized recipes, plan meals effortlessly, and elevate your cooking game with the power of
+            artificial intelligence.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-            <button className="bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] hover:from-[#45a049] hover:to-[#5cb860] text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-[#4CAF50]/25 flex items-center">
-              Start Cooking Now <ArrowRight className="ml-2 w-5 h-5" />
-            </button>
-            <button className="bg-[#2A1B3D]/50 backdrop-blur-sm border border-[#3A2F5F] hover:bg-[#2A1B3D]/70 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-200 transform hover:scale-105 flex items-center">
-              <Play className="mr-2 w-5 h-5" /> Watch Demo
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center mb-12 sm:mb-16 px-4">
+            <button
+              onClick={handleGetStarted}
+              className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold text-base sm:text-lg transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-green-500/25 flex items-center justify-center"
+            >
+              {user ? "Go to Dashboard" : "Start Cooking Now"}
+              <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 max-w-4xl mx-auto px-4">
             <div className="text-center">
-              <div className="text-3xl font-bold text-[#4CAF50] mb-2">10K+</div>
-              <div className="text-gray-400">Recipes Generated</div>
+              <div className="text-2xl sm:text-3xl font-bold text-green-400 mb-2">10K+</div>
+              <div className="text-gray-400 text-sm sm:text-base">Recipes Generated</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-[#4CAF50] mb-2">5K+</div>
-              <div className="text-gray-400">Happy Cooks</div>
+              <div className="text-2xl sm:text-3xl font-bold text-green-400 mb-2">5K+</div>
+              <div className="text-gray-400 text-sm sm:text-base">Happy Cooks</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-[#4CAF50] mb-2">4.9★</div>
-              <div className="text-gray-400">User Rating</div>
+              <div className="text-2xl sm:text-3xl font-bold text-green-400 mb-2">4.9★</div>
+              <div className="text-gray-400 text-sm sm:text-base">User Rating</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 px-4 relative">
+      <section id="features" className="py-16 sm:py-20 px-4 relative">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+          <div className="text-center mb-12 sm:mb-16">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 sm:mb-6">
               Powerful Features for
-              <span className="text-[#4CAF50] block mt-2">Modern Cooking</span>
+              <span className="text-green-400 block mt-1 sm:mt-2">Modern Cooking</span>
             </h2>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+            <p className="text-lg sm:text-xl text-gray-300 max-w-3xl mx-auto px-4">
               Everything you need to transform your kitchen experience and become a better cook.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             {features.map((feature, index) => (
-              <div key={index} className="bg-[#2A1B3D]/50 backdrop-blur-sm border border-[#3A2F5F] rounded-2xl p-6 hover:bg-[#2A1B3D]/70 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-[#4CAF50]/10">
-                <div className="w-12 h-12 bg-[#4CAF50]/20 rounded-lg flex items-center justify-center mb-4 text-[#4CAF50]">
+              <div
+                key={index}
+                className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-4 sm:p-6 hover:bg-slate-800/70 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-green-500/10"
+              >
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500/20 rounded-lg flex items-center justify-center mb-3 sm:mb-4 text-green-400">
                   {feature.icon}
                 </div>
-                <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
-                <p className="text-gray-400 leading-relaxed">{feature.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section id="how-it-works" className="py-20 px-4 relative">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              How It <span className="text-[#4CAF50]">Works</span>
-            </h2>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Get started in just three simple steps and transform your cooking experience.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            {[
-              { step: "1", title: "Tell Us Your Preferences", desc: "Share your dietary preferences, allergies, and favorite cuisines." },
-              { step: "2", title: "Get AI Recommendations", desc: "Receive personalized recipe suggestions based on your profile." },
-              { step: "3", title: "Start Cooking", desc: "Follow step-by-step instructions and enjoy delicious meals." }
-            ].map((item, index) => (
-              <div key={index} className="text-center relative">
-                <div className="w-16 h-16 bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] rounded-full flex items-center justify-center text-2xl font-bold mb-6 mx-auto shadow-lg shadow-[#4CAF50]/25">
-                  {item.step}
-                </div>
-                <h3 className="text-2xl font-semibold mb-4">{item.title}</h3>
-                <p className="text-gray-400 leading-relaxed">{item.desc}</p>
-                {index < 2 && (
-                  <ArrowRight className="hidden md:block w-6 h-6 text-[#4CAF50] absolute top-8 -right-6 transform rotate-0" />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section id="testimonials" className="py-20 px-4 relative">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              What Our <span className="text-[#4CAF50]">Users Say</span>
-            </h2>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Join thousands of happy cooks who have transformed their kitchen experience.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <div key={index} className="bg-[#2A1B3D]/50 backdrop-blur-sm border border-[#3A2F5F] rounded-2xl p-6 hover:bg-[#2A1B3D]/70 transition-all duration-300">
-                <div className="flex mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 text-[#4CAF50] fill-current" />
-                  ))}
-                </div>
-                <p className="text-gray-300 mb-6 leading-relaxed">"{testimonial.content}"</p>
-                <div>
-                  <div className="font-semibold">{testimonial.name}</div>
-                  <div className="text-[#4CAF50] text-sm">{testimonial.role}</div>
-                </div>
+                <h3 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3">{feature.title}</h3>
+                <p className="text-gray-400 leading-relaxed text-sm sm:text-base">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -252,47 +212,56 @@ const HomeLandingPage: React.FC = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 relative">
+      <section className="py-16 sm:py-20 px-4 relative">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="bg-gradient-to-r from-[#4CAF50]/20 to-[#66BB6A]/20 backdrop-blur-sm border border-[#3A2F5F] rounded-3xl p-12">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+          <div className="bg-gradient-to-r from-green-500/20 to-emerald-600/20 backdrop-blur-sm border border-slate-700/50 rounded-3xl p-8 sm:p-12">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 sm:mb-6">
               Ready to Transform Your
-              <span className="text-[#4CAF50] block mt-2">Cooking Experience?</span>
+              <span className="text-green-400 block mt-1 sm:mt-2">Cooking Experience?</span>
             </h2>
-            <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+            <p className="text-lg sm:text-xl text-gray-300 mb-6 sm:mb-8 max-w-2xl mx-auto">
               Join thousands of home cooks who are already using AI to create amazing meals every day.
             </p>
-            <button className="bg-gradient-to-r from-[#4CAF50] to-[#66BB6A] hover:from-[#45a049] hover:to-[#5cb860] text-white px-10 py-4 rounded-lg font-semibold text-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-[#4CAF50]/25">
-              Get Started Free Today
+            <button
+              onClick={handleGetStarted}
+              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-8 sm:px-10 py-3 sm:py-4 rounded-lg font-semibold text-lg sm:text-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-green-500/25"
+            >
+              {user ? "Go to Dashboard" : "Get Started Free Today"}
             </button>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-[#3A2F5F] py-12 px-4">
+      <footer className="border-t border-slate-700/50 py-8 sm:py-12 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center space-x-2 mb-4 md:mb-0">
+          <div className="flex flex-col sm:flex-row justify-between items-center">
+            <div className="flex items-center space-x-2 mb-4 sm:mb-0">
               <div className="relative">
-                <ChefHat className="w-8 h-8 text-[#4CAF50]" />
-                <Sparkles className="w-4 h-4 text-[#66BB6A] absolute -top-1 -right-1 animate-pulse" />
+                <ChefHat className="w-6 h-6 sm:w-8 sm:h-8 text-green-400" />
+                <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-400 absolute -top-1 -right-1 animate-pulse" />
               </div>
-              <span className="text-xl font-bold">Food AI Assistant</span>
+              <span className="text-lg sm:text-xl font-bold">Food AI Assistant</span>
             </div>
-            <div className="flex space-x-8 text-gray-400">
-              <a href="#" className="hover:text-[#4CAF50] transition-colors">Privacy</a>
-              <a href="#" className="hover:text-[#4CAF50] transition-colors">Terms</a>
-              <a href="#" className="hover:text-[#4CAF50] transition-colors">Support</a>
+            <div className="flex space-x-6 sm:space-x-8 text-gray-400 text-sm sm:text-base">
+              <a href="#" className="hover:text-green-400 transition-colors">
+                Privacy
+              </a>
+              <a href="#" className="hover:text-green-400 transition-colors">
+                Terms
+              </a>
+              <a href="#" className="hover:text-green-400 transition-colors">
+                Support
+              </a>
             </div>
           </div>
-          <div className="border-t border-[#3A2F5F] mt-8 pt-8 text-center text-gray-400">
+          <div className="border-t border-slate-700/50 mt-6 sm:mt-8 pt-6 sm:pt-8 text-center text-gray-400 text-sm sm:text-base">
             <p>© 2025 Food AI Assistant. All rights reserved.</p>
           </div>
         </div>
       </footer>
     </div>
-  );
-};
+  )
+}
 
-export default HomeLandingPage;
+export default HomeLandingPage
