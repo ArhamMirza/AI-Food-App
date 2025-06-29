@@ -2,20 +2,8 @@
 
 import type React from "react"
 import { useState } from "react"
-import { MessageSquare, X, ChefHat, ChevronLeft, ChevronRight, Plus } from "lucide-react"
-import ConversationItem from "./ConversationItem"
-import RecipeItem from "../recipe/RecipeItem"
-
-interface Conversation {
-  conversation_id: string
-  title?: string
-}
-
-interface Recipe {
-  recipe_id: string
-  title: string
-  content?: string
-}
+import { MessageSquare, ChefHat, Plus, Edit3, Check, X, Trash2, ChevronDown, ChevronRight } from "lucide-react"
+import type { Conversation, Recipe } from "./types"
 
 interface SidebarProps {
   isOpen: boolean
@@ -32,29 +20,26 @@ interface SidebarProps {
   onNewChat: () => void
   onSelectConversation: (id: string) => void
   onSelectRecipe: (id: string) => void
-  onEditTitle: (id: string, title: string | undefined) => void
+  onEditTitle: (id: string, title: string) => void
   onSaveTitle: (id: string, title: string) => void
   onCancelEdit: () => void
   onDeleteConversation: (id: string) => void
   onEditTitleChange: (title: string) => void
-  onEditRecipeTitle: (recipeId: string, title: string) => void
-  onSaveRecipeTitle: (recipeId: string, title: string) => void
+  onEditRecipeTitle: (id: string, title: string) => void
+  onSaveRecipeTitle: (id: string, title: string) => void
   onCancelEditRecipe: () => void
-  onDeleteRecipe: (recipeId: string) => void
+  onDeleteRecipe: (id: string) => void
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
-  isCollapsed,
   conversations,
   recipes,
   selectedConversation,
   selectedRecipe,
-  error,
   editingTitle,
   editTitle,
   onClose,
-  onToggleCollapse,
   onNewChat,
   onSelectConversation,
   onSelectRecipe,
@@ -68,284 +53,222 @@ const Sidebar: React.FC<SidebarProps> = ({
   onCancelEditRecipe,
   onDeleteRecipe,
 }) => {
-  const [view, setView] = useState<"chats" | "recipes">("chats")
+  const [conversationsCollapsed, setConversationsCollapsed] = useState(false)
+  const [recipesCollapsed, setRecipesCollapsed] = useState(false)
 
   return (
-    <aside
-      className={`
-        fixed lg:static inset-y-0 left-0 z-50 
-        ${isCollapsed ? "w-16" : "w-80 lg:w-72 xl:w-80"}
-        transform ${isOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0
-        transition-all duration-300 ease-in-out
-        bg-gradient-to-b from-slate-800 to-slate-900 
-        border-r border-slate-700/50 backdrop-blur-xl
-        flex flex-col shadow-2xl
-      `}
-    >
-      <style>
-        {`
-          .view-transition {
-            transition: all 0.3s ease-in-out;
-          }
-          .view-enter-active {
-            opacity: 1;
-            transform: translateX(0);
-          }
-          .view-exit-active {
-            opacity: 0;
-            transform: translateX(20px);
-            position: absolute;
-          }
-          .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-          .custom-scrollbar::-webkit-scrollbar-track { background: transparent; border-radius: 3px; }
-          .custom-scrollbar::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #10b981 0%, #059669 100%); border-radius: 3px; }
-          .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #34d399 0%, #10b981 100%); }
-          .custom-scrollbar { scrollbar-width: thin; scrollbar-color: #10b981 transparent; }
-        `}
-      </style>
+    <>
+      <style>{`
+        .sidebar-scrollable::-webkit-scrollbar {
+          display: none;
+        }
+        .sidebar-scrollable {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+      `}</style>
 
-      {/* Header */}
-      <div className="flex justify-between items-center p-4 border-b border-slate-700/50">
-        {!isCollapsed ? (
-          <>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-green-400 to-emerald-500 rounded-lg flex items-center justify-center">
-                {view === "chats" ? (
-                  <MessageSquare size={18} className="text-white" />
-                ) : (
-                  <ChefHat size={18} className="text-white" />
-                )}
-              </div>
-              <span className="text-white font-bold text-lg">{view === "chats" ? "Food AI" : "My Recipes"}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={onToggleCollapse}
-                className="hidden lg:block text-gray-400 hover:text-white transition-colors p-1"
-                title="Collapse sidebar"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <button onClick={onClose} className="lg:hidden text-gray-400 hover:text-white transition-colors p-1">
-                <X size={20} />
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="flex flex-col items-center gap-4 w-full">
+      <div
+        className={`fixed lg:relative inset-y-0 left-0 z-50 w-80 bg-slate-800/95 backdrop-blur-sm border-r border-slate-700/50 transform transition-transform duration-300 ease-in-out ${
+          isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        } lg:w-80 flex flex-col sidebar-scrollable`}
+      >
+        {/* Sidebar Header */}
+        <div className="p-4 border-b border-slate-700/50">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-white">Food AI</h2>
             <button
-              onClick={onToggleCollapse}
-              className="text-gray-400 hover:text-white transition-colors p-1"
-              title="Expand sidebar"
+              onClick={onClose}
+              className="lg:hidden p-2 text-gray-400 hover:text-white rounded-lg hover:bg-slate-700/50 transition-colors"
             >
-              <ChevronRight size={20} />
+              <X size={20} />
             </button>
-            <div className="flex flex-col gap-2">
+          </div>
+        </div>
+
+        {/* Sidebar Content */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-6 sidebar-scrollable">
+          {/* Conversations Section */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
               <button
-                onClick={() => setView("chats")}
-                className={`
-                  w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200
-                  ${view === "chats" ? "bg-green-600 text-white" : "bg-slate-700/50 text-gray-300 hover:bg-slate-600/50"}
-                `}
-                title="Chats"
+                onClick={() => setConversationsCollapsed(!conversationsCollapsed)}
+                className="flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
               >
+                {conversationsCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                 <MessageSquare size={16} />
+                Conversations ({conversations.length})
               </button>
-              <button
-                onClick={() => setView("recipes")}
-                className={`
-                  w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200
-                  ${view === "recipes" ? "bg-green-600 text-white" : "bg-slate-700/50 text-gray-300 hover:bg-slate-600/50"}
-                `}
-                title="Recipes"
-              >
-                <ChefHat size={16} />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {!isCollapsed && (
-        <>
-          {/* Toggle Buttons */}
-          <div className="p-4 flex gap-2">
-            <button
-              onClick={() => setView("chats")}
-              className={`
-                flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-all duration-200
-                ${view === "chats" ? "bg-green-600 text-white" : "bg-slate-700/50 text-gray-300 hover:bg-slate-600/50"}
-              `}
-            >
-              Chats
-            </button>
-            <button
-              onClick={() => setView("recipes")}
-              className={`
-                flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-all duration-200
-                ${view === "recipes" ? "bg-green-600 text-white" : "bg-slate-700/50 text-gray-300 hover:bg-slate-600/50"}
-              `}
-            >
-              Recipes
-            </button>
-          </div>
-
-          {/* New Chat Button - only show in chats view */}
-          {view === "chats" && (
-            <div className="px-4 pb-4">
               <button
                 onClick={onNewChat}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-xl transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
-                title="Start new chat"
+                className="p-1 text-green-400 hover:bg-green-400/10 rounded transition-colors"
+                title="New Chat"
               >
-                <Plus size={18} />
-                New Chat
+                <Plus size={16} />
               </button>
             </div>
-          )}
 
-          {/* Content Area */}
-          <nav className="flex-1 px-4 pb-4 overflow-y-auto custom-scrollbar relative">
-            <div className="view-transition view-enter-active">
-              {view === "chats" ? (
-                <>
-                  {error && (
-                    <div className="mb-4 p-3 bg-red-900/50 border border-red-700/50 rounded-lg text-red-200 text-sm">
-                      {error}
-                    </div>
-                  )}
-                  {conversations.length === 0 && !error && (
-                    <div className="text-center py-8 text-gray-400">
-                      <MessageSquare size={32} className="mx-auto mb-3 opacity-50" />
-                      <p className="text-sm">No conversations yet</p>
-                      <p className="text-xs mt-1">Start a new chat to begin</p>
-                    </div>
-                  )}
-                  <div className="space-y-2">
-                    {conversations.map((conversation) => (
-                      <ConversationItem
-                        key={conversation.conversation_id}
-                        conversation={conversation}
-                        isSelected={selectedConversation === conversation.conversation_id}
-                        isEditing={editingTitle === conversation.conversation_id}
-                        editTitle={editTitle}
-                        onSelect={() => onSelectConversation(conversation.conversation_id)}
-                        onEdit={() => onEditTitle(conversation.conversation_id, conversation.title)}
-                        onSave={() => onSaveTitle(conversation.conversation_id, editTitle)}
-                        onCancel={onCancelEdit}
-                        onDelete={() => onDeleteConversation(conversation.conversation_id)}
-                        onEditTitleChange={onEditTitleChange}
-                      />
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <>
-                  {recipes.length === 0 && (
-                    <div className="text-center py-8 text-gray-400">
-                      <ChefHat size={32} className="mx-auto mb-3 opacity-50" />
-                      <p className="text-sm">No recipes yet</p>
-                      <p className="text-xs mt-1">Save a recipe to see it here</p>
-                    </div>
-                  )}
-                  <div className="space-y-2">
-                    {recipes.map((recipe) => (
-                      <RecipeItem
-                        key={recipe.recipe_id}
-                        recipe={recipe}
-                        isSelected={selectedRecipe === recipe.recipe_id}
-                        isEditing={editingTitle === recipe.recipe_id}
-                        editTitle={editTitle}
-                        onSelect={() => onSelectRecipe(recipe.recipe_id)}
-                        onEdit={() => onEditRecipeTitle(recipe.recipe_id, recipe.title)}
-                        onSave={() => onSaveRecipeTitle(recipe.recipe_id, editTitle)}
-                        onCancel={onCancelEditRecipe}
-                        onDelete={() => onDeleteRecipe(recipe.recipe_id)}
-                        onEditTitleChange={onEditTitleChange}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          </nav>
-
-          {/* Navigation Links */}
-          <nav className="p-4 border-t border-slate-700/50 space-y-2">
-            {["Dashboard", "Meal Plans"].map((item) => (
-              <a
-                key={item}
-                href={`/${item.toLowerCase().replace(" ", "-")}`}
-                className="block px-3 py-2 text-sm text-gray-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
-              >
-                {item}
-              </a>
-            ))}
-            <a
-              href="/logout"
-              className="block px-3 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors mt-4"
-            >
-              Logout
-            </a>
-          </nav>
-        </>
-      )}
-
-      {/* Collapsed Content */}
-      {isCollapsed && (
-        <nav className="flex-1 px-2 py-4 overflow-y-auto custom-scrollbar">
-          {/* Collapsed New Chat Button */}
-          {isCollapsed && view === "chats" && (
-            <div className="px-2 pb-2">
-              <button
-                onClick={onNewChat}
-                className="w-full h-10 rounded-lg flex items-center justify-center bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg"
-                title="Start new chat"
-              >
-                <Plus size={16} className="text-white" />
-              </button>
-            </div>
-          )}
-          <div className="space-y-2">
-            {view === "chats"
-              ? conversations.slice(0, 8).map((conversation) => (
-                  <button
-                    key={conversation.conversation_id}
-                    onClick={() => onSelectConversation(conversation.conversation_id)}
-                    className={`
-                    w-full h-10 rounded-lg flex items-center justify-center transition-all duration-200
-                    ${
-                      selectedConversation === conversation.conversation_id
-                        ? "bg-green-600 text-white"
-                        : "bg-slate-700/50 text-gray-300 hover:bg-slate-600/50"
-                    }
-                  `}
-                    title={conversation.title || "Untitled Chat"}
+            {!conversationsCollapsed && (
+              <div className="space-y-2 max-h-64 overflow-y-auto sidebar-scrollable">
+                {conversations.map((conv) => (
+                  <div
+                    key={conv.conversation_id}
+                    className={`group relative p-3 rounded-lg cursor-pointer transition-all ${
+                      selectedConversation === conv.conversation_id
+                        ? "bg-green-500/20 border border-green-500/30"
+                        : "bg-slate-700/30 hover:bg-slate-700/50"
+                    }`}
                   >
-                    <MessageSquare size={16} />
-                  </button>
-                ))
-              : recipes.slice(0, 8).map((recipe) => (
-                  <button
-                    key={recipe.recipe_id}
-                    onClick={() => onSelectRecipe(recipe.recipe_id)}
-                    className={`
-                    w-full h-10 rounded-lg flex items-center justify-center transition-all duration-200
-                    ${
-                      selectedRecipe === recipe.recipe_id
-                        ? "bg-green-600 text-white"
-                        : "bg-slate-700/50 text-gray-300 hover:bg-slate-600/50"
-                    }
-                  `}
-                    title={recipe.title}
-                  >
-                    <ChefHat size={16} />
-                  </button>
+                    {editingTitle === conv.conversation_id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={editTitle}
+                          onChange={(e) => onEditTitleChange(e.target.value)}
+                          className="flex-1 bg-slate-600 text-white px-2 py-1 rounded text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              onSaveTitle(conv.conversation_id, editTitle)
+                            } else if (e.key === "Escape") {
+                              onCancelEdit()
+                            }
+                          }}
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => onSaveTitle(conv.conversation_id, editTitle)}
+                          className="p-1 text-green-400 hover:bg-green-400/10 rounded"
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button onClick={onCancelEdit} className="p-1 text-gray-400 hover:bg-slate-600 rounded">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div onClick={() => onSelectConversation(conv.conversation_id)}>
+                          <h4 className="text-white text-sm font-medium truncate">{conv.title}</h4>
+                          <p className="text-gray-400 text-xs mt-1">{new Date(conv.updated_at).toLocaleDateString()}</p>
+                        </div>
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onEditTitle(conv.conversation_id, conv.title)
+                            }}
+                            className="p-1 text-gray-400 hover:text-white hover:bg-slate-600 rounded"
+                          >
+                            <Edit3 size={12} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (window.confirm("Delete this conversation?")) {
+                                onDeleteConversation(conv.conversation_id)
+                              }
+                            }}
+                            className="p-1 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 ))}
+              </div>
+            )}
           </div>
-        </nav>
-      )}
-    </aside>
+
+          {/* Recipes Section */}
+          <div>
+            <button
+              onClick={() => setRecipesCollapsed(!recipesCollapsed)}
+              className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-3 hover:text-white transition-colors"
+            >
+              {recipesCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+              <ChefHat size={16} />
+              Saved Recipes ({recipes.length})
+            </button>
+
+            {!recipesCollapsed && (
+              <div className="space-y-2 max-h-64 overflow-y-auto sidebar-scrollable">
+                {recipes.map((recipe) => (
+                  <div
+                    key={recipe.recipe_id}
+                    className={`group relative p-3 rounded-lg cursor-pointer transition-all ${
+                      selectedRecipe === recipe.recipe_id
+                        ? "bg-blue-500/20 border border-blue-500/30"
+                        : "bg-slate-700/30 hover:bg-slate-700/50"
+                    }`}
+                  >
+                    {editingTitle === recipe.recipe_id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={editTitle}
+                          onChange={(e) => onEditTitleChange(e.target.value)}
+                          className="flex-1 bg-slate-600 text-white px-2 py-1 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              onSaveRecipeTitle(recipe.recipe_id, editTitle)
+                            } else if (e.key === "Escape") {
+                              onCancelEditRecipe()
+                            }
+                          }}
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => onSaveRecipeTitle(recipe.recipe_id, editTitle)}
+                          className="p-1 text-green-400 hover:bg-green-400/10 rounded"
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button onClick={onCancelEditRecipe} className="p-1 text-gray-400 hover:bg-slate-600 rounded">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div onClick={() => onSelectRecipe(recipe.recipe_id)}>
+                          <h4 className="text-white text-sm font-medium truncate">{recipe.title}</h4>
+                          <p className="text-gray-400 text-xs mt-1">
+                            {new Date(recipe.updated_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onEditRecipeTitle(recipe.recipe_id, recipe.title)
+                            }}
+                            className="p-1 text-gray-400 hover:text-white hover:bg-slate-600 rounded"
+                          >
+                            <Edit3 size={12} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (window.confirm("Delete this recipe?")) {
+                                onDeleteRecipe(recipe.recipe_id)
+                              }
+                            }}
+                            className="p-1 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
   )
 }
 

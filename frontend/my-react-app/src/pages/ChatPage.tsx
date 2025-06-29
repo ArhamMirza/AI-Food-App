@@ -17,6 +17,7 @@ import {
   Youtube,
   Trash2,
   Plus,
+  ArrowLeft,
 } from "lucide-react"
 
 import Sidebar from "../components/chat/Sidebar"
@@ -31,25 +32,18 @@ import { useAppSelector } from "../redux/hooks"
 import { authorizedFetch } from "../utils/auth"
 
 const BASE_URL = import.meta.env.VITE_API_URL
-
 const BASE_CHAT_URL = `${BASE_URL}/chatbot/chat`
 const RECIPE_URL = `${BASE_URL}/recipe`
 
 const extractRecipeContent = (content: string) => {
-  // Define regex to detect the beginning of structured recipe sections
-  const sectionMarkerRegex = /(^|\n)(\s*(###|[\*\-]|\d+\.)\s+|\s*\w+\s*:\s*)/i;
+  const sectionMarkerRegex = /(^|\n)(\s*(###|[*-]|\d+\.)\s+|\s*\w+\s*:\s*)/i
+  const match = sectionMarkerRegex.exec(content)
 
-  const match = sectionMarkerRegex.exec(content);
-  
   if (match && match.index > 0) {
-    // Return content *after* the first section marker
-    return content.slice(match.index).trim();
+    return content.slice(match.index).trim()
   }
-
-  // If no marker is found, fall back to default
-  return content.trim();
-};
-
+  return content.trim()
+}
 
 const reconstructFullContent = (originalContent: string, editedRecipe: string) => {
   const sentences = originalContent.split(/(?<=[.!?])\s+/)
@@ -69,11 +63,10 @@ const ChatPage = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
-  const user:any = useAppSelector((state) => state.user.user)
-  const preferences:any = useAppSelector((state) => state.user.user?.preferences)
+  const user: any = useAppSelector((state) => state.user.user)
+  const preferences: any = useAppSelector((state) => state.user.user?.preferences)
 
-
-  const USER_ID = user.id
+  const USER_ID = user?.id || "demo-user"
 
   // Modal states
   const [showNewChatModal, setShowNewChatModal] = useState(false)
@@ -90,7 +83,7 @@ const ChatPage = () => {
   const [search, setSearch] = useState(false)
   const [searchType, setSearchType] = useState("")
 
-  // Editor states
+  // Editor states - Mobile optimized
   const [editorOpen, setEditorOpen] = useState(false)
   const [editorContent, setEditorContent] = useState("")
   const [originalContent, setOriginalContent] = useState("")
@@ -107,29 +100,24 @@ const ChatPage = () => {
   const chatRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // API functions - Chat API
-  // utils/apiCall.ts
+  // API functions
+  const apiCall = async (endpoint: string, options: RequestInit = {}) => {
+    const response = await authorizedFetch(`${BASE_CHAT_URL}${endpoint}`, options)
+    if (!response.ok) throw new Error(`API call failed: ${response.status}`)
+    return response.json()
+  }
 
-const apiCall = async (endpoint: string, options: RequestInit = {}) => {
-  const response = await authorizedFetch(`${BASE_CHAT_URL}${endpoint}`, options)
-  if (!response.ok) throw new Error(`API call failed: ${response.status}`)
-  return response.json()
-}
-
- const recipeApiCall = async (endpoint: string, options: RequestInit = {}) => {
-  const response = await authorizedFetch(`${RECIPE_URL}${endpoint}`, options)
-  if (!response.ok) throw new Error(`Recipe API call failed: ${response.status}`)
-  return response.json()
-}
-
-
+  const recipeApiCall = async (endpoint: string, options: RequestInit = {}) => {
+    const response = await authorizedFetch(`${RECIPE_URL}${endpoint}`, options)
+    if (!response.ok) throw new Error(`Recipe API call failed: ${response.status}`)
+    return response.json()
+  }
 
   const fetchUserConversations = async () => {
     try {
       setError(null)
       const data = await apiCall(`/user/${USER_ID}`)
       setConversations(Array.isArray(data) ? data : [])
-      // Removed auto-selection of first conversation
     } catch (err) {
       setError("Failed to load conversations")
       showNotification("Failed to load conversations", "error")
@@ -153,6 +141,7 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
       setLoading(true)
       setSelectedRecipe(null)
       setIsEditingRecipe(false)
+      setEditorOpen(false) // Close editor when switching conversations
       const data = await apiCall(`/${conversationId}`)
       setMessages(Array.isArray(data.messages) ? data.messages : [])
       setSelectedConversation(conversationId)
@@ -171,6 +160,7 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
       setLoading(true)
       setSelectedConversation(null)
       setMessages([])
+      setEditorOpen(false) // Close editor when switching to recipe
       const response = await recipeApiCall(`/${recipeId}`)
       const recipe = response.data
       setRecipeContent(recipe.content.text || recipe.title)
@@ -200,9 +190,7 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
       `.trim()
 
     const fullMessage = `${input.trim()}\n\n${preferencesText}`
-    console.log(fullMessage)
-
-    const userMessage = { role: "user", content: fullMessage }
+    const userMessage: Message = { role: "user", content: fullMessage }
     setMessages((prev) => [...prev, userMessage])
     setInput("")
     setLoading(true)
@@ -220,7 +208,7 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
         body: JSON.stringify({ message: fullMessage }),
       })
 
-      setMessages((prev) => [...prev, { role: "assistant", content: data.response }])
+      setMessages((prev) => [...prev, { role: "assistant", content: data.response } as Message])
 
       if (data.conversation_id !== selectedConversation) {
         setSelectedConversation(data.conversation_id)
@@ -234,7 +222,6 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
       setLoading(false)
     }
   }
-
 
   const deleteConversation = async (conversationId: string) => {
     try {
@@ -282,6 +269,7 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
       setSelectedConversation(data.conversation_id)
       setSelectedRecipe(null)
       setIsEditingRecipe(false)
+      setEditorOpen(false)
       setNewChatTitle("")
       await fetchUserConversations()
       showNotification("New chat created successfully", "success")
@@ -341,7 +329,9 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
       })
 
       setRecipes((prev) =>
-        prev.map((recipe) => (recipe.recipe_id === selectedRecipe ? { ...recipe, content: recipeContent } : recipe)),
+        prev.map((recipe) =>
+          recipe.recipe_id === selectedRecipe ? { ...recipe, content: { text: recipeContent } } : recipe,
+        ),
       )
       setIsEditingRecipe(false)
       showNotification("Recipe updated successfully", "success")
@@ -386,7 +376,7 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
     }
   }
 
-  // Editor functions
+  // Editor functions - Mobile optimized
   const handleOpenEditor = (content: string, messageIndex?: number) => {
     setOriginalContent(content)
     setEditorContent(extractRecipeContent(content))
@@ -467,7 +457,9 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   }, [])
 
   useEffect(() => {
-    chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" })
+    if (chatRef.current) {
+      chatRef.current.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" })
+    }
   }, [messages])
 
   useEffect(() => {
@@ -480,12 +472,12 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const currentConversation = conversations.find((c) => c.conversation_id === selectedConversation)
   const currentRecipe = recipes.find((r) => r.recipe_id === selectedRecipe)
 
-  // Recipe Display Component
+  // Recipe Display Component - Mobile optimized
   const RecipeDisplay = () => (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
-      {/* Recipe Header */}
-      <div className="p-4 md:p-6 border-b border-slate-700/50 bg-slate-800/30 backdrop-blur-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Recipe Header - Mobile optimized */}
+      <div className="p-3 sm:p-4 lg:p-6 border-b border-slate-700/50 bg-slate-800/30 backdrop-blur-sm">
+        <div className="flex flex-col gap-3 sm:gap-4">
           <div className="flex-1">
             {isEditingRecipeTitle ? (
               <div className="flex items-center gap-2">
@@ -493,7 +485,7 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
                   type="text"
                   value={recipeDisplayTitle}
                   onChange={(e) => setRecipeDisplayTitle(e.target.value)}
-                  className="text-xl md:text-2xl font-bold bg-slate-700/50 text-white px-3 py-2 rounded-lg border border-slate-600/50 focus:outline-none focus:border-green-500/50 w-full sm:w-auto"
+                  className="text-lg sm:text-xl lg:text-2xl font-bold bg-slate-700/50 text-white px-3 py-2 rounded-lg border border-slate-600/50 focus:outline-none focus:border-green-500/50 w-full"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       updateRecipeTitle(selectedRecipe!, recipeDisplayTitle)
@@ -506,7 +498,7 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
                 />
                 <button
                   onClick={() => updateRecipeTitle(selectedRecipe!, recipeDisplayTitle)}
-                  className="p-2 text-green-400 hover:bg-green-400/10 rounded-lg transition-colors"
+                  className="p-2 text-green-400 hover:bg-green-400/10 rounded-lg transition-colors flex-shrink-0"
                 >
                   <Check size={18} />
                 </button>
@@ -515,15 +507,17 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
                     setIsEditingRecipeTitle(false)
                     setRecipeDisplayTitle(currentRecipe?.title || "")
                   }}
-                  className="p-2 text-gray-400 hover:bg-slate-700/50 rounded-lg transition-colors"
+                  className="p-2 text-gray-400 hover:bg-slate-700/50 rounded-lg transition-colors flex-shrink-0"
                 >
                   <X size={18} />
                 </button>
               </div>
             ) : (
               <div className="flex items-center gap-3">
-                <ChefHat size={24} className="text-green-400 flex-shrink-0" />
-                <h1 className="text-xl md:text-2xl font-bold text-white truncate">{recipeDisplayTitle}</h1>
+                <ChefHat size={20} className="text-green-400 flex-shrink-0" />
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-white truncate flex-1">
+                  {recipeDisplayTitle}
+                </h1>
                 <button
                   onClick={() => setIsEditingRecipeTitle(true)}
                   className="p-2 text-gray-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors flex-shrink-0"
@@ -533,7 +527,7 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={handleCopyContent}
               className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors"
@@ -555,7 +549,7 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
               >
                 <Edit3 size={16} />
-                <span className="hidden sm:inline">Edit</span>
+                <span>Edit</span>
               </button>
             )}
             <button
@@ -573,22 +567,22 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
         </div>
       </div>
 
-      {/* Recipe Content */}
-      <div className="flex-1 p-4 md:p-6 overflow-hidden">
+      {/* Recipe Content - Mobile optimized */}
+      <div className="flex-1 p-3 sm:p-4 lg:p-6 overflow-hidden">
         {isEditingRecipe ? (
           <div className="h-full flex flex-col">
             <textarea
               value={recipeContent}
               onChange={(e) => setRecipeContent(e.target.value)}
-              className="w-full h-full min-h-[300px] bg-slate-900/50 text-gray-100 border border-slate-600/50 rounded-lg p-4 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-green-500/50 resize-none custom-scrollbar"
+              className="w-full h-full min-h-[300px] bg-slate-900/50 text-gray-100 border border-slate-600/50 rounded-lg p-3 sm:p-4 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-green-500/50 resize-none custom-scrollbar"
               placeholder="Enter your recipe content here..."
             />
           </div>
         ) : (
-          <div className="bg-slate-900/30 rounded-lg p-4 md:p-6 h-full overflow-y-auto custom-scrollbar">
+          <div className="bg-slate-900/30 rounded-lg p-3 sm:p-4 lg:p-6 h-full overflow-y-auto custom-scrollbar">
             <div className="prose prose-invert prose-headings:text-green-400 prose-strong:text-emerald-300 prose-em:text-blue-300 max-w-none">
               {recipeContent.split("\n\n").map((paragraph, i) => (
-                <p key={i} className="mb-4 text-gray-100 leading-relaxed">
+                <p key={i} className="mb-4 text-gray-100 leading-relaxed text-sm sm:text-base">
                   {paragraph.split("\n").map((line, j) => (
                     <React.Fragment key={j}>
                       {line}
@@ -604,6 +598,77 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
     </div>
   )
 
+  // Mobile Editor Component - Full screen on mobile
+  const MobileEditor = () => (
+    <div className="fixed inset-0 z-50 bg-slate-900 flex flex-col lg:relative lg:w-1/2 lg:border-l lg:border-slate-600/50 lg:bg-slate-800/50 lg:backdrop-blur-sm">
+      {/* Editor Header - Mobile optimized */}
+      <div className="flex items-center justify-between p-3 sm:p-4 border-b border-slate-600/50 bg-slate-800/50 backdrop-blur-sm">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleCloseEditor}
+            className="p-2 text-gray-400 hover:bg-slate-700/50 rounded-lg transition-colors lg:hidden"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <ChefHat size={18} className="text-blue-400" />
+          <h3 className="text-base sm:text-lg font-medium text-white">Recipe Editor</h3>
+          {hasUnsavedChanges && (
+            <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full">Unsaved</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleCopyContent}
+            className="p-2 text-blue-400 hover:bg-slate-700/50 rounded-lg transition-colors"
+            title="Copy recipe"
+          >
+            <Copy size={16} />
+          </button>
+          <button
+            onClick={handleSaveContent}
+            className={`p-2 rounded-lg transition-colors ${
+              hasUnsavedChanges
+                ? "text-green-400 hover:bg-green-400/10 bg-green-400/5"
+                : "text-green-400 hover:bg-slate-700/50"
+            }`}
+            title={editingMessageIndex !== null ? "Save to database" : "Save locally"}
+          >
+            <Save size={16} />
+          </button>
+          <button
+            onClick={handleCloseEditor}
+            className="p-2 text-gray-400 hover:bg-slate-700/50 rounded-lg transition-colors hidden lg:block"
+            title="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* Editor Info Banner */}
+      {editingMessageIndex !== null && (
+        <div className="px-4 py-2 bg-blue-500/10 border-b border-slate-600/50">
+          <p className="text-sm text-blue-400">
+            Editing message #{editingMessageIndex + 1} • Changes will be saved to database and chat
+          </p>
+        </div>
+      )}
+
+      {/* Editor Content */}
+      <div className="flex-1 p-3 sm:p-4 overflow-hidden">
+        <textarea
+          value={editorContent}
+          onChange={(e) => {
+            setEditorContent(e.target.value)
+            setHasUnsavedChanges(true)
+          }}
+          className="w-full h-full bg-slate-900/50 text-gray-100 border border-slate-600/50 rounded-lg p-3 sm:p-4 font-mono text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none custom-scrollbar"
+          placeholder="Recipe content will appear here..."
+        />
+      </div>
+    </div>
+  )
+
   return (
     <div className="flex h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-hidden">
       <style>{`
@@ -613,22 +678,28 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #34d399 0%, #10b981 100%); }
         .custom-scrollbar { scrollbar-width: thin; scrollbar-color: #10b981 transparent; }
         
-        @media (max-width: 768px) {
-          .editor-open-mobile {
-            flex-direction: column;
+        /* Mobile viewport height adjustment for browser bars */
+        @supports (height: 100dvh) {
+          .mobile-full-height {
+            height: 100dvh;
           }
-          .editor-open-mobile > div:first-child,
-          .editor-open-mobile > div:last-child {
-            width: 100%;
-            height: 50%;
+        }
+        
+        /* Ensure proper mobile layout */
+        @media (max-width: 1023px) {
+          .mobile-chat-container {
+            height: 100vh;
+            height: 100dvh;
           }
         }
       `}</style>
 
+      {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
+      {/* Sidebar */}
       <Sidebar
         isOpen={sidebarOpen}
         isCollapsed={sidebarCollapsed}
@@ -667,25 +738,26 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
         onDeleteRecipe={deleteRecipe}
       />
 
-      <div className={`flex flex-1 min-w-0 max-h-screen overflow-hidden ${editorOpen ? "editor-open-mobile" : ""}`}>
-        <div
-          className={`transition-all duration-300 ${editorOpen ? "w-1/2" : "w-full"} flex flex-col max-h-screen overflow-hidden`}
-        >
-          {/* Header */}
-          <header className="flex items-center justify-between p-3 sm:p-4 border-b border-slate-700/50 bg-slate-800/50 backdrop-blur-sm">
-            <div className="flex items-center gap-2 sm:gap-3">
+      {/* Main Content Area */}
+      <div
+        className={`flex flex-1 min-w-0 mobile-chat-container overflow-hidden ${editorOpen && !selectedRecipe ? "hidden lg:flex" : ""}`}
+      >
+        <div className="w-full flex flex-col mobile-chat-container overflow-hidden">
+          {/* Header - Fixed on mobile */}
+          <header className="flex items-center justify-between p-3 sm:p-4 border-b border-slate-700/50 bg-slate-800/50 backdrop-blur-sm flex-shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden text-gray-400 hover:text-white transition-colors p-2 -ml-2 bg-slate-800/50 rounded-lg"
+                className="lg:hidden text-gray-400 hover:text-white transition-colors p-2 -ml-2 bg-slate-800/50 rounded-lg flex-shrink-0"
               >
                 <Menu size={20} />
               </button>
-              <div>
-                <h1 className="text-base sm:text-lg font-semibold">
+              <div className="min-w-0">
+                <h1 className="text-sm sm:text-base lg:text-lg font-semibold">
                   {selectedRecipe ? "Recipe Mode" : "Chat with Food AI"}
                 </h1>
                 {(selectedConversation || selectedRecipe) && (
-                  <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[200px] sm:max-w-none">
+                  <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[150px] sm:max-w-[200px] lg:max-w-none">
                     {selectedConversation
                       ? currentConversation?.title || "Untitled Chat"
                       : currentRecipe?.title || "Untitled Recipe"}
@@ -693,19 +765,19 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               {!selectedRecipe && (
                 <button
                   onClick={() => setShowNewChatModal(true)}
                   className="p-2 text-green-400 hover:bg-green-400/10 rounded-lg transition-colors"
                   title="New Chat"
                 >
-                  <Plus size={20} />
+                  <Plus size={18} />
                 </button>
               )}
               <div className="hidden sm:flex items-center gap-2 text-xs text-gray-400">
                 <Smartphone size={14} />
-                <span>Mobile Optimized</span>
+                <span className="hidden md:inline">Mobile Optimized</span>
               </div>
             </div>
           </header>
@@ -715,22 +787,24 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
             <RecipeDisplay />
           ) : (
             <>
-              {/* Chat Area */}
+              {/* Chat Area - Scrollable on mobile */}
               <div
                 ref={chatRef}
-                className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4 bg-gradient-to-b from-transparent to-slate-900/20 custom-scrollbar"
+                className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4 bg-gradient-to-b from-transparent to-slate-900/20 custom-scrollbar"
               >
                 {!selectedConversation ? (
                   <div className="flex items-center justify-center h-full">
-                    <div className="text-center max-w-md">
-                      <div className="w-16 h-16 bg-gradient-to-r from-green-400 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <MessageSquare size={28} className="text-white" />
+                    <div className="text-center max-w-md px-4">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-green-400 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <MessageSquare size={20} className="text-white" />
                       </div>
-                      <h2 className="text-xl font-semibold mb-2">Welcome to Food AI</h2>
-                      <p className="text-gray-400 mb-6">Select a conversation or recipe to begin!</p>
+                      <h2 className="text-lg sm:text-xl font-semibold mb-2">Welcome to Food AI</h2>
+                      <p className="text-gray-400 mb-6 text-sm sm:text-base">
+                        Select a conversation or recipe to begin!
+                      </p>
                       <button
                         onClick={() => setShowNewChatModal(true)}
-                        className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-xl transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                        className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-xl transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02] text-sm sm:text-base"
                       >
                         Start New Chat
                       </button>
@@ -750,25 +824,25 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
                     ))}
 
                     {loading && (
-                      <div className="flex items-center gap-3 text-gray-400 px-4">
-                        <div className="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center">
-                          <Loader2 className="animate-spin" size={14} />
+                      <div className="flex items-center gap-3 text-gray-400 px-2 sm:px-4">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-slate-800 rounded-full flex items-center justify-center">
+                          <Loader2 className="animate-spin" size={12} />
                         </div>
-                        <span className="text-sm">Food AI is thinking...</span>
+                        <span className="text-xs sm:text-sm">Food AI is thinking...</span>
                       </div>
                     )}
                   </>
                 )}
               </div>
 
-              {/* Input Area */}
-              <footer className="p-4 border-t border-slate-700/50 bg-slate-800/30 backdrop-blur-sm">
-                <div className="flex items-end gap-3 max-w-4xl mx-auto">
+              {/* Input Area - Fixed at bottom on mobile */}
+              <footer className="p-3 sm:p-4 border-t border-slate-700/50 bg-slate-800/30 backdrop-blur-sm flex-shrink-0">
+                <div className="flex items-end gap-2 sm:gap-3 max-w-4xl mx-auto">
                   <div className="flex-1 relative">
                     <textarea
                       ref={textareaRef}
                       rows={1}
-                      className="w-full resize-none rounded-2xl bg-slate-800/80 text-white px-4 py-3 pr-20 border border-slate-700/50 focus:outline-none focus:border-green-500/50 focus:ring-1 focus:ring-green-500/20 backdrop-blur-sm transition-all duration-200 text-sm placeholder-gray-400"
+                      className="w-full resize-none rounded-xl sm:rounded-2xl bg-slate-800/80 text-white px-3 sm:px-4 py-2 sm:py-3 pr-16 sm:pr-20 border border-slate-700/50 focus:outline-none focus:border-green-500/50 focus:ring-1 focus:ring-green-500/20 backdrop-blur-sm transition-all duration-200 text-sm placeholder-gray-400"
                       placeholder={
                         selectedConversation
                           ? "Ask about recipes, meal planning, or cooking tips..."
@@ -783,12 +857,12 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
                         }
                       }}
                       disabled={!selectedConversation || loading}
-                      style={{ minHeight: "48px", maxHeight: "120px" }}
+                      style={{ minHeight: "40px", maxHeight: "120px" }}
                     />
-                    <div className="absolute bottom-3 right-3 flex gap-2">
+                    <div className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 flex gap-1 sm:gap-2">
                       <button
                         onClick={() => toggleSearch("web")}
-                        className={`p-2 rounded-lg transition-colors ${
+                        className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
                           search && searchType === "web"
                             ? "bg-green-600 text-white"
                             : "bg-slate-700/50 text-gray-400 hover:bg-slate-600/50"
@@ -796,11 +870,11 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
                         title="Search Web"
                         disabled={!selectedConversation || loading}
                       >
-                        <Globe size={16} />
+                        <Globe size={14} />
                       </button>
                       <button
                         onClick={() => toggleSearch("youtube")}
-                        className={`p-2 rounded-lg transition-colors ${
+                        className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
                           search && searchType === "youtube"
                             ? "bg-green-600 text-white"
                             : "bg-slate-700/50 text-gray-400 hover:bg-slate-600/50"
@@ -808,85 +882,26 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
                         title="Search YouTube"
                         disabled={!selectedConversation || loading}
                       >
-                        <Youtube size={16} />
+                        <Youtube size={14} />
                       </button>
                     </div>
                   </div>
                   <button
                     onClick={sendMessage}
                     disabled={!input.trim() || loading || !selectedConversation}
-                    className="w-12 h-12 rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.05] disabled:transform-none"
+                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.05] disabled:transform-none flex-shrink-0"
                   >
-                    <SendHorizontal size={18} className="text-white" />
+                    <SendHorizontal size={16} className="text-white" />
                   </button>
                 </div>
               </footer>
             </>
           )}
         </div>
-
-        {/* Editor Panel */}
-        {editorOpen && (
-          <div className="w-1/2 border-l border-slate-600/50 bg-slate-800/50 backdrop-blur-sm flex flex-col max-h-screen overflow-hidden">
-            <div className="flex items-center justify-between p-3 sm:p-4 border-b border-slate-600/50">
-              <h3 className="text-base sm:text-lg font-medium text-white flex items-center gap-2">
-                <ChefHat size={18} className="text-blue-400" />
-                <span className="truncate">Recipe Editor</span>
-                {hasUnsavedChanges && (
-                  <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full">Unsaved</span>
-                )}
-              </h3>
-              <div className="flex items-center gap-1 sm:gap-2">
-                <button
-                  onClick={handleCopyContent}
-                  className="p-1.5 sm:p-2 text-blue-400 hover:bg-slate-700/50 rounded-lg transition-colors"
-                  title="Copy recipe"
-                >
-                  <Copy size={16} />
-                </button>
-                <button
-                  onClick={handleSaveContent}
-                  className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
-                    hasUnsavedChanges
-                      ? "text-green-400 hover:bg-green-400/10 bg-green-400/5"
-                      : "text-green-400 hover:bg-slate-700/50"
-                  }`}
-                  title={editingMessageIndex !== null ? "Save to database" : "Save locally"}
-                >
-                  <Save size={16} />
-                </button>
-                <button
-                  onClick={handleCloseEditor}
-                  className="p-1.5 sm:p-2 text-gray-400 hover:bg-slate-700/50 rounded-lg transition-colors"
-                  title="Close"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-
-            {editingMessageIndex !== null && (
-              <div className="px-4 py-2 bg-blue-500/10 border-b border-slate-600/50">
-                <p className="text-sm text-blue-400">
-                  Editing message #{editingMessageIndex + 1} • Changes will be saved to database and chat
-                </p>
-              </div>
-            )}
-
-            <div className="flex-1 p-4">
-              <textarea
-                value={editorContent}
-                onChange={(e) => {
-                  setEditorContent(e.target.value)
-                  setHasUnsavedChanges(true)
-                }}
-                className="w-full h-full bg-slate-900/50 text-gray-100 border border-slate-600/50 rounded-lg p-4 font-mono text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none custom-scrollbar"
-                placeholder="Recipe content will appear here..."
-              />
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Mobile Editor - Full screen on mobile, side panel on desktop */}
+      {editorOpen && <MobileEditor />}
 
       {/* Modals */}
       <NewChatModal

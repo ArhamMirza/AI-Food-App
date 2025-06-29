@@ -1,15 +1,27 @@
 export interface Message {
-  role: string;
-  content: string;
+  role: "user" | "assistant"
+  content: string
 }
 
 export interface Conversation {
-  conversation_id: string;
-  title?: string;
+  conversation_id: string
+  title: string
+  created_at: string
+  updated_at: string
 }
 
 export interface Recipe {
-  recipe_id: string;
-  title: string;
-  content: string;
+  recipe_id: string
+  title: string
+  content: {
+    text: string
+  }
+  created_at: string
+  updated_at: string
+}
+
+export interface NotificationItem {
+  id: string
+  message: string
+  type: "success" | "error" | "info"
 }

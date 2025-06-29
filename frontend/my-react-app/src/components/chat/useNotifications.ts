@@ -1,29 +1,32 @@
-import { useState } from 'react';
+"use client"
 
-export interface NotificationItem {
-  id: string;
-  message: string;
-  type: 'success' | 'error';
-}
+import { useState, useCallback } from "react"
+import type { NotificationItem } from "./types"
 
 const useNotifications = () => {
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
 
-  const showNotification = (message: string, type: 'success' | 'error') => {
-    const id = Math.random().toString(36).substr(2, 9);
-    setNotifications(prev => [...prev, { id, message, type }]);
+  const showNotification = useCallback((message: string, type: "success" | "error" | "info" = "info") => {
+    const id = Math.random().toString(36).substr(2, 9)
+    const notification: NotificationItem = { id, message, type }
 
-    // Auto-remove after 3 seconds
+    setNotifications((prev) => [...prev, notification])
+
+    // Auto remove after 5 seconds
     setTimeout(() => {
-      setNotifications(prev => prev.filter(notif => notif.id !== id));
-    }, 3000);
-  };
+      setNotifications((prev) => prev.filter((n) => n.id !== id))
+    }, 5000)
+  }, [])
 
-  const removeNotification = (id: string) => {
-    setNotifications(prev => prev.filter(notif => notif.id !== id));
-  };
+  const removeNotification = useCallback((id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id))
+  }, [])
 
-  return { notifications, showNotification, removeNotification };
-};
+  return {
+    notifications,
+    showNotification,
+    removeNotification,
+  }
+}
 
-export default useNotifications;
+export default useNotifications
