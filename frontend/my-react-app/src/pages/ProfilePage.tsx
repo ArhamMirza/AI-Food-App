@@ -139,7 +139,7 @@ const handleSave = async () => {
     setError("")
     console.log(formData)
 
-    const response = await authorizedFetch(`${BASE_URL}/api/v1/user/update`, {
+    const response = await authorizedFetch(`${BASE_URL}/user/update`, {
       method: "PUT",
       body: JSON.stringify(formData),
     })
@@ -440,25 +440,6 @@ const handleSave = async () => {
                           disabled={!isEditing}
                           className="w-full bg-slate-900/50 text-white border border-slate-600/50 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-green-500/50 disabled:opacity-50"
                         />
-                      </div>
-                      
-                    </div>
-
-                    <div>
-                      <h3 className="text-lg font-semibold mb-4">Account Statistics</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="bg-slate-700/30 rounded-lg p-4 text-center">
-                          <div className="text-2xl font-bold text-green-400">{user?.saved_recipes?.length || 0}</div>
-                          <div className="text-gray-400 text-sm">Saved Recipes</div>
-                        </div>
-                        <div className="bg-slate-700/30 rounded-lg p-4 text-center">
-                          <div className="text-2xl font-bold text-blue-400">{user?.meal_plans?.length || 0}</div>
-                          <div className="text-gray-400 text-sm">Meal Plans</div>
-                        </div>
-                        <div className="bg-slate-700/30 rounded-lg p-4 text-center">
-                          <div className="text-2xl font-bold text-purple-400">{user?.shopping_lists?.length || 0}</div>
-                          <div className="text-gray-400 text-sm">Shopping Lists</div>
-                        </div>
                       </div>
                     </div>
                   </div>

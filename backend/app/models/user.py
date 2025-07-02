@@ -19,7 +19,7 @@ class DietaryRestriction(str, Enum):
     KOSHER = "Kosher"
 
 class UserPreferences(BaseModel):
-    dietary_restrictions: List[DietaryRestriction] = []
+    dietary_restrictions: List[str] = []
     allergies: List[str] = []
     favorite_cuisines: List[str] = []
     disliked_ingredients: List[str] = []

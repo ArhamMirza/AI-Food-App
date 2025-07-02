@@ -687,7 +687,7 @@ body, html {
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: 1000;
+    z-index: 30;
     background: rgba(30, 41, 59, 0.95);
     backdrop-filter: blur(12px);
     border-top: 1px solid rgba(148, 163, 184, 0.1);
@@ -696,7 +696,7 @@ body, html {
   
   /* Chat area with perfect spacing */
   .mobile-chat-perfect {
-    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
   }
   
   /* Simple input container */
@@ -855,17 +855,18 @@ body, html {
               </div>
 
               {/* Input Area - Perfectly positioned and aligned */}
+             
               <footer className="flex-shrink-0 mobile-input-perfect lg:relative lg:bg-slate-800/50 lg:backdrop-blur-sm lg:border-t lg:border-slate-700/50 lg:p-4">
                 <div className="mobile-input-container lg:max-w-4xl lg:mx-auto">
-                  <div className="flex items-end gap-3">
+                  <div className="flex items-center gap-3">
                     <div className="flex-1 relative">
                       <textarea
                         ref={textareaRef}
                         rows={1}
-                        className="w-full resize-none rounded-2xl bg-slate-800/90 text-white px-4 py-3 pr-24 border border-slate-700/50 focus:outline-none focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 backdrop-blur-sm transition-all duration-200 text-base placeholder-gray-400 shadow-lg no-scrollbar"
+                        className="w-full resize-none rounded-2xl bg-slate-800/90 text-white px-4 py-4 pr-24 border border-slate-700/50 focus:outline-none focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 backdrop-blur-sm transition-all duration-200 text-base placeholder-gray-400 shadow-lg no-scrollbar"
                         placeholder={
                           selectedConversation
-                            ? "Ask about recipes, meal planning, or cooking tips..."
+                            ? "Ask anything food related..."
                             : "Select a chat to start messaging"
                         }
                         value={input}
@@ -877,10 +878,10 @@ body, html {
                           }
                         }}
                         disabled={!selectedConversation || loading}
-                        style={{ minHeight: "48px", maxHeight: "120px" }}
+                        style={{ minHeight: "56px", maxHeight: "120px" }}
                       />
-                      {/* Search buttons positioned like ChatGPT - bottom right inside input */}
-                      <div className="absolute bottom-2 right-2 flex gap-1">
+                      {/* Search buttons positioned in middle right inside input */}
+                      <div className="absolute top-1/2 -translate-y-1/2 right-3 flex gap-1">
                         <button
                           onClick={() => toggleSearch("web")}
                           className={`p-2 rounded-lg transition-colors ${
@@ -907,13 +908,13 @@ body, html {
                         </button>
                       </div>
                     </div>
-                    {/* Send button - properly aligned horizontally with input */}
+                    {/* Send button - aligned to center */}
                     <button
                       onClick={sendMessage}
                       disabled={!input.trim() || loading || !selectedConversation}
-                      className="w-12 h-12 rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.05] disabled:transform-none flex-shrink-0"
+                      className="w-14 h-14 rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.05] disabled:transform-none flex-shrink-0"
                     >
-                      <SendHorizontal size={16} className="text-white" />
+                      <SendHorizontal size={18} className="text-white" />
                     </button>
                   </div>
                 </div>

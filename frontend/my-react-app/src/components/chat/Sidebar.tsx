@@ -187,19 +187,19 @@ const Sidebar: React.FC<SidebarProps> = ({
                       </div>
                     ) : (
                       <>
-                        <div onClick={() => onSelectConversation(conv.conversation_id)}>
-                          <h4 className="text-white text-sm font-medium truncate">{conv.title}</h4>
+                        <div onClick={() => onSelectConversation(conv.conversation_id)} className="pr-16">
+                          <h4 className="text-white text-sm font-medium truncate pr-2">{conv.title}</h4>
                           <p className="text-gray-400 text-xs mt-1">{new Date(conv.updated_at).toLocaleDateString()}</p>
                         </div>
-                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                        <div className="absolute top-2 right-2 transition-opacity flex gap-1">
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
                               onEditTitle(conv.conversation_id, conv.title)
                             }}
-                            className="p-1 text-gray-400 hover:text-white hover:bg-slate-600 rounded"
+                            className="p-1.5 text-gray-400 hover:text-white hover:bg-slate-600 rounded"
                           >
-                            <Edit3 size={12} />
+                            <Edit3 size={14} />
                           </button>
                           <button
                             onClick={(e) => {
@@ -208,9 +208,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                                 onDeleteConversation(conv.conversation_id)
                               }
                             }}
-                            className="p-1 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded"
+                            className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded"
                           >
-                            <Trash2 size={12} />
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </>
@@ -273,21 +273,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                       </div>
                     ) : (
                       <>
-                        <div onClick={() => onSelectRecipe(recipe.recipe_id)}>
-                          <h4 className="text-white text-sm font-medium truncate">{recipe.title}</h4>
+                        <div onClick={() => onSelectRecipe(recipe.recipe_id)} className="pr-16">
+                          <h4 className="text-white text-sm font-medium truncate pr-2">{recipe.title}</h4>
                           <p className="text-gray-400 text-xs mt-1">
                             {new Date(recipe.updated_at).toLocaleDateString()}
                           </p>
                         </div>
-                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                        <div className="absolute top-2 right-2 transition-opacity flex gap-1">
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
                               onEditRecipeTitle(recipe.recipe_id, recipe.title)
                             }}
-                            className="p-1 text-gray-400 hover:text-white hover:bg-slate-600 rounded"
+                            className="p-1.5 text-gray-400 hover:text-white hover:bg-slate-600 rounded"
                           >
-                            <Edit3 size={12} />
+                            <Edit3 size={14} />
                           </button>
                           <button
                             onClick={(e) => {
@@ -296,9 +296,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                                 onDeleteRecipe(recipe.recipe_id)
                               }
                             }}
-                            className="p-1 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded"
+                            className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded"
                           >
-                            <Trash2 size={12} />
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </>
