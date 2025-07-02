@@ -133,36 +133,41 @@ const ProfilePage: React.FC = () => {
     }))
   }
 
-const handleSave = async () => {
-  try {
-    setLoading(true)
-    setError("")
-    console.log(formData)
+  const handleSave = async () => {
+    try {
+      setLoading(true)
+      setError("")
+      setSaveSuccess(false)
+      console.log(formData)
 
-    const response = await authorizedFetch(`${BASE_URL}/user/update`, {
-      method: "PUT",
-      body: JSON.stringify(formData),
-    })
+      const response = await authorizedFetch(`${BASE_URL}/user/update`, {
+        method: "PUT",
+        body: JSON.stringify(formData),
+      })
 
-    console.log(response)
-    if (!response.ok) {
-      throw new Error("Failed to update profile")
+      const result = await response.json()
+
+      if (!response.ok) {
+        // result.detail could be a string or an object
+        const errorMessage =
+          typeof result.detail === "string"
+            ? result.detail
+            : result.detail?.message || "Failed to update profile"
+        throw new Error(errorMessage)
+      }
+
+      dispatch(updateUser(result)) // ✅ Redux state updated
+
+      setIsEditing(false)
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 3000)
+    } catch (error:any) {
+      console.error("Failed to update profile:", error)
+      setError(error.message || "Failed to update profile. Please try again.")
+    } finally {
+      setLoading(false)
     }
-
-    const updatedUser = await response.json()
-
-    dispatch(updateUser(updatedUser)) // ✅ Redux state updated
-
-    setIsEditing(false)
-    setSaveSuccess(true)
-    setTimeout(() => setSaveSuccess(false), 3000)
-  } catch (error) {
-    console.error("Failed to update profile:", error)
-    setError("Failed to update profile. Please try again.")
-  } finally {
-    setLoading(false)
   }
-}
 
 
 
