@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.models.user import UserUpdate, UserResponse
 from app.schemas.user_schema import UserSchema
 from app.api.deps import get_current_active_user
-from pymongo.errors import PyMongoError, DuplicateKeyError  # Assuming you're using PyMongo or Motor
+from pymongo.errors import PyMongoError, DuplicateKeyError
 
 router = APIRouter()
 
@@ -12,16 +12,18 @@ async def update_user(
     current_user: dict = Depends(get_current_active_user),
 ):
     user_id = str(current_user["_id"])
-
-    # Check if no update fields were provided
     data = update_data.dict(exclude_unset=True)
+
     if not data:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="No update fields provided"
+            detail={
+                "code": "no_update_fields",
+                "message": "No update fields were provided in the request body.",
+                "fields": []
+            }
         )
 
-    # Normalize username
     if "username" in data:
         data["username"] = data["username"].strip().lower()
 
@@ -30,32 +32,51 @@ async def update_user(
     except DuplicateKeyError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Username or email already exists"
+            detail={
+                "code": "duplicate_key",
+                "message": "Username or email already exists.",
+                "fields": ["username", "email"]
+            }
         )
     except PyMongoError as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database error: {str(e)}"
+            detail={
+                "code": "db_error",
+                "message": "A database error occurred.",
+                "error": str(e)
+            }
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Unexpected error: {str(e)}"
+            detail={
+                "code": "unexpected_error",
+                "message": "An unexpected error occurred.",
+                "error": str(e)
+            }
         )
 
     if not updated:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User update failed"
+            detail={
+                "code": "update_failed",
+                "message": "User update failed. No changes were applied.",
+                "fields": list(data.keys())
+            }
         )
 
     updated_user = await UserSchema.find_by_id(user_id)
     if not updated_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found after update"
+            detail={
+                "code": "user_not_found",
+                "message": "User not found after update.",
+                "user_id": user_id
+            }
         )
 
     updated_user["id"] = str(updated_user["_id"])
-
     return UserResponse(**updated_user)

@@ -144,6 +144,7 @@ const handleSave = async () => {
       body: JSON.stringify(formData),
     })
 
+    console.log(response)
     if (!response.ok) {
       throw new Error("Failed to update profile")
     }
