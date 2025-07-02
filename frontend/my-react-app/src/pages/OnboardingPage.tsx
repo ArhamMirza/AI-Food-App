@@ -14,11 +14,8 @@ import {
   Clock,
   Utensils,
   Heart,
+  Plus,
 } from "lucide-react"
-import { useNavigate } from "react-router-dom"
-import { useAppSelector, useAppDispatch } from "../redux/hooks"
-import { authorizedFetch } from "../utils/auth"
-import { updateUser } from "../redux/slices"
 
 interface UserPreferences {
   dietary_restrictions: string[]
@@ -38,13 +35,6 @@ const OnboardingPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string>("")
   const [success, setSuccess] = useState<boolean>(false)
-
-  const navigate = useNavigate()
-  const dispatch = useAppDispatch()
-  const user :any = useAppSelector((state) => state.user.user)
-
-  const BASE_URL = import.meta.env.VITE_API_URL
-
 
   const [formData, setFormData] = useState<OnboardingFormData>({
     preferences: {
@@ -72,12 +62,20 @@ const OnboardingPage: React.FC = () => {
 
   const handleArrayAdd = (field: string, value: string) => {
     if (!value.trim()) return
+
     const prefField = field.replace("preferences.", "")
+    const currentValues = formData.preferences[prefField as keyof UserPreferences] as string[]
+
+    // Check if value already exists (case insensitive)
+    if (currentValues.some((item) => item.toLowerCase() === value.trim().toLowerCase())) {
+      return
+    }
+
     setFormData((prev) => ({
       ...prev,
       preferences: {
         ...prev.preferences,
-        [prefField]: [...(prev.preferences[prefField as keyof UserPreferences] as string[]), value.trim()],
+        [prefField]: [...currentValues, value.trim()],
       },
     }))
   }
@@ -98,34 +96,28 @@ const OnboardingPage: React.FC = () => {
       setLoading(true)
       setError("")
 
-      const response = await authorizedFetch(`${BASE_URL}/user/update`, {
-        method: "PUT",
-        body: JSON.stringify({
-          user_id: user?.id,
-          preferences: formData.preferences,
-        }),
-      })
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 2000))
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.detail || "Failed to update profile")
-      }
-      dispatch(updateUser({ preferences: formData.preferences }))
-
+      // Simulate success
+      console.log("Saving preferences:", formData.preferences)
       setSuccess(true)
+
       setTimeout(() => {
-        navigate("/dashboard")
+        // In a real app, this would navigate to dashboard
+        console.log("Redirecting to dashboard...")
       }, 1500)
     } catch (error) {
       console.error("Failed to update profile:", error)
-      setError(error instanceof Error ? error.message : "Failed to update profile. Please try again.")
+      setError("Failed to update profile. Please try again.")
     } finally {
       setLoading(false)
     }
   }
 
   const handleSkip = () => {
-    navigate("/dashboard")
+    console.log("Skipping onboarding...")
+    // In a real app, this would navigate to dashboard
   }
 
   const handleNext = () => {
@@ -200,6 +192,7 @@ const OnboardingPage: React.FC = () => {
     "Korean",
     "Greek",
     "Spanish",
+    "Pakistani", // Added Pakistani cuisine
   ]
 
   const prepTimes = [
@@ -296,7 +289,6 @@ const OnboardingPage: React.FC = () => {
                 <p className="text-gray-400 mb-6 text-sm sm:text-base">
                   This helps us suggest recipes that match your experience
                 </p>
-
                 <div className="grid grid-cols-1 gap-3 sm:gap-4">
                   {skillLevels.map((level) => (
                     <button
@@ -338,7 +330,6 @@ const OnboardingPage: React.FC = () => {
                 <p className="text-gray-400 mb-6 text-sm sm:text-base">
                   We'll prioritize recipes that fit your schedule
                 </p>
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {prepTimes.map((time) => (
                     <button
@@ -355,7 +346,6 @@ const OnboardingPage: React.FC = () => {
                     </button>
                   ))}
                 </div>
-
                 <div className="mt-6 sm:mt-8">
                   <label className="block text-sm font-medium text-gray-300 mb-3">
                     Or enter a custom time (minutes)
@@ -386,27 +376,27 @@ const OnboardingPage: React.FC = () => {
                 <p className="text-gray-400 mb-6 text-sm sm:text-base">
                   We'll make sure to avoid ingredients that don't work for you
                 </p>
-
                 <div className="space-y-6 sm:space-y-8">
                   <MultiSelectField
                     label="Dietary Restrictions"
-                    description="Select any that apply to you"
+                    description="Select any that apply to you or add your own"
                     values={formData.preferences.dietary_restrictions}
                     options={commonDietaryRestrictions}
                     onAdd={(value) => handleArrayAdd("preferences.dietary_restrictions", value)}
                     onRemove={(index) => handleArrayRemove("preferences.dietary_restrictions", index)}
                     icon={<Heart size={16} />}
+                    allowCustom={true}
                   />
-
                   <MultiSelectField
                     label="Allergies"
-                    description="Important for your safety"
+                    description="Important for your safety - add any allergies you have"
                     values={formData.preferences.allergies}
                     options={commonAllergies}
                     onAdd={(value) => handleArrayAdd("preferences.allergies", value)}
                     onRemove={(index) => handleArrayRemove("preferences.allergies", index)}
                     icon={<AlertCircle size={16} />}
                     variant="warning"
+                    allowCustom={true}
                   />
                 </div>
               </div>
@@ -419,15 +409,15 @@ const OnboardingPage: React.FC = () => {
                 <p className="text-gray-400 mb-6 text-sm sm:text-base">
                   We'll suggest more recipes from your favorite cuisines
                 </p>
-
                 <MultiSelectField
                   label="Favorite Cuisines"
-                  description="Select as many as you like"
+                  description="Select as many as you like or add your own"
                   values={formData.preferences.favorite_cuisines}
                   options={commonCuisines}
                   onAdd={(value) => handleArrayAdd("preferences.favorite_cuisines", value)}
                   onRemove={(index) => handleArrayRemove("preferences.favorite_cuisines", index)}
                   icon={<ChefHat size={16} />}
+                  allowCustom={true}
                 />
               </div>
             )}
@@ -451,7 +441,6 @@ const OnboardingPage: React.FC = () => {
                   Skip for now
                 </button>
               </div>
-
               <div className="flex gap-3 w-full sm:w-auto">
                 {currentStep < totalSteps ? (
                   <button
@@ -489,7 +478,7 @@ const OnboardingPage: React.FC = () => {
   )
 }
 
-// Enhanced Multi-Select Field Component
+// Enhanced Multi-Select Field Component with Custom Input
 interface MultiSelectFieldProps {
   label: string
   description: string
@@ -499,6 +488,7 @@ interface MultiSelectFieldProps {
   onRemove: (index: number) => void
   icon: React.ReactNode
   variant?: "default" | "warning"
+  allowCustom?: boolean
 }
 
 const MultiSelectField: React.FC<MultiSelectFieldProps> = ({
@@ -510,8 +500,10 @@ const MultiSelectField: React.FC<MultiSelectFieldProps> = ({
   onRemove,
   icon,
   variant = "default",
+  allowCustom = false,
 }) => {
   const [showAll, setShowAll] = useState(false)
+  const [customInput, setCustomInput] = useState("")
   const displayOptions = showAll ? options : options.slice(0, 8)
 
   const colorClasses = {
@@ -520,16 +512,34 @@ const MultiSelectField: React.FC<MultiSelectFieldProps> = ({
       unselected: "bg-slate-700/30 text-gray-300 border-slate-600/50 hover:border-slate-500 hover:bg-slate-700/50",
       icon: "text-green-400",
       selectedChip: "bg-green-500/20 text-green-400 border-green-500/30",
+      input: "focus:ring-green-500/50 focus:border-green-500/50",
+      addButton: "bg-green-500/20 hover:bg-green-500/30 text-green-400 border-green-500/30",
     },
     warning: {
       selected: "bg-red-500/20 text-red-400 border-red-500/30 shadow-lg shadow-red-500/20",
       unselected: "bg-slate-700/30 text-gray-300 border-slate-600/50 hover:border-slate-500 hover:bg-slate-700/50",
       icon: "text-red-400",
       selectedChip: "bg-red-500/20 text-red-400 border-red-500/30",
+      input: "focus:ring-red-500/50 focus:border-red-500/50",
+      addButton: "bg-red-500/20 hover:bg-red-500/30 text-red-400 border-red-500/30",
     },
   }
 
   const colors = colorClasses[variant]
+
+  const handleCustomAdd = () => {
+    if (customInput.trim()) {
+      onAdd(customInput.trim())
+      setCustomInput("")
+    }
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      handleCustomAdd()
+    }
+  }
 
   return (
     <div>
@@ -538,6 +548,30 @@ const MultiSelectField: React.FC<MultiSelectFieldProps> = ({
         <h3 className="text-base sm:text-lg font-semibold">{label}</h3>
       </div>
       <p className="text-gray-400 text-xs sm:text-sm mb-4">{description}</p>
+
+      {/* Custom Input Field */}
+      {allowCustom && (
+        <div className="mb-4 sm:mb-6">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={customInput}
+              onChange={(e) => setCustomInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder={`Add custom ${label.toLowerCase().slice(0, -1)}...`}
+              className={`flex-1 bg-slate-900/50 text-white border border-slate-600/50 rounded-lg sm:rounded-xl p-3 sm:p-4 focus:outline-none focus:ring-2 transition-all duration-300 text-sm sm:text-base ${colors.input}`}
+            />
+            <button
+              onClick={handleCustomAdd}
+              disabled={!customInput.trim()}
+              className={`px-4 sm:px-6 py-3 sm:py-4 rounded-lg sm:rounded-xl border transition-all duration-300 flex items-center gap-2 text-sm sm:text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed ${colors.addButton}`}
+            >
+              <Plus size={16} />
+              Add
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
         {displayOptions.map((option) => {

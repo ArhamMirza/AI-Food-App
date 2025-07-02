@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import AuthPage from './pages/AuthPage'
 import EmailVerificationPage from './pages/EmailVerificationPage'
 import HomeLandingPage from './pages/HomeLandingPage'
@@ -13,6 +13,7 @@ import OnboardingPage from './pages/OnboardingPage'
 import OnboardingGuard from './components/OnboardingGuard'
 import TestRedirect from './pages/TestRedirect'
 
+
 function App() {
   return (
     <div>
@@ -21,6 +22,8 @@ function App() {
         <Route path="/" element={<HomeLandingPage />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/verify-email" element={<EmailVerificationPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+
 
         {/* Protected routes */}
         <Route
