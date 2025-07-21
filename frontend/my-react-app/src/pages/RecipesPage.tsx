@@ -207,8 +207,6 @@ const RecipesPage: React.FC = () => {
 
     try {
       setLoading(true)
-      // This would be replaced with an actual API call to save to meal plan
-      console.log(`Adding recipe ${selectedRecipeForMealPlan.recipe_id} to meal plan on ${date} as ${mealType}`)
 
       // Mock API call
       await new Promise((resolve) => setTimeout(resolve, 500))

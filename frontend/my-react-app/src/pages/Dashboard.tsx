@@ -86,7 +86,6 @@ const Dashboard: React.FC = () => {
   const RECIPE_URL = `${API_BASE_URL}/recipe`
   const MEAL_PLAN_URL = `${API_BASE_URL}/meal-plan`
   const USER_ID = user.id // This would normally come from auth context
-  console.log(user)
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY)
@@ -103,7 +102,6 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true)
       
-      console.log(`Fetching Recipes from ${RECIPE_URL}`)
       const response = await authorizedFetch(`${RECIPE_URL}/user/${USER_ID}`)
 
       if (!response.ok) throw new Error(`API call failed: ${response.status}`)

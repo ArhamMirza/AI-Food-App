@@ -109,7 +109,6 @@ const AuthPage: React.FC = () => {
       }
 
       const data = await backendResponse.json()
-      console.log(data)
 
       // Handle token storage
       handleAuthSuccess(data)
@@ -122,7 +121,6 @@ const AuthPage: React.FC = () => {
       const createdAt = new Date(userInfo.created_at);
       const now = new Date();
       const diffInMinutes = (now.getTime() - createdAt.getTime()) / 1000 / 60;
-      console.log(diffInMinutes)
 
       // You decide what "empty preferences" means
       const preferences = userInfo.preferences;
@@ -209,7 +207,6 @@ const AuthPage: React.FC = () => {
       })
 
       const data = await response.json()
-      console.log(data.access_token)
 
       if (response.ok) {
         if (isLogin) {
@@ -218,16 +215,27 @@ const AuthPage: React.FC = () => {
 
           const userInfo = await dispatch(fetchUserInfo(data.access_token)).unwrap()
 
-          // Check if user needs onboarding
-          if (
-            userInfo.preferences?.diet === "none" ||
-            !userInfo.preferences?.allergies ||
-            Object.keys(userInfo.preferences.allergies).length === 0
-          ) {
+          const createdAt = new Date(userInfo.created_at);
+          const now = new Date();
+          const diffInMinutes = (now.getTime() - createdAt.getTime()) / 1000 / 60;
+
+          // You decide what "empty preferences" means
+          const preferences = userInfo.preferences;
+          const preferencesAreEmpty =
+            (!preferences.dietary_restrictions || preferences.dietary_restrictions.length === 0) &&
+            (!preferences.allergies || preferences.allergies.length === 0) &&
+            (!preferences.favorite_cuisines || preferences.favorite_cuisines.length === 0)
+
+          const shouldOnboard = (diffInMinutes-300) < 5 && preferencesAreEmpty;
+
+
+          if (shouldOnboard) {
+            setAllowOnboarding(true)
             navigate("/onboarding")
           } else {
             navigate("/dashboard")
           }
+
         } else {
           setShowEmailVerificationPopup(true)
           setFormData({

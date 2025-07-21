@@ -138,7 +138,6 @@ const ProfilePage: React.FC = () => {
       setLoading(true)
       setError("")
       setSaveSuccess(false)
-      console.log(formData)
 
       const response = await authorizedFetch(`${BASE_URL}/user/update`, {
         method: "PUT",

@@ -148,7 +148,6 @@ const MealPlanPage: React.FC = () => {
 
       const data: ApiResponse<Recipe[]> = await response.json()
       setRecipes(data.data || [])
-      console.log(recipes)
     } catch (error) {
       console.error("Failed to load recipes:", error)
       setError("Failed to load recipes")
@@ -280,7 +279,6 @@ const MealPlanPage: React.FC = () => {
   }
 
   const handleDateClick = (date: string) => {
-    console.log("Selected date:", date) // Debug log
     setSelectedDate(date)
   }
 
