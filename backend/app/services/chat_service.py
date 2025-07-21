@@ -52,22 +52,20 @@ class ChatService:
                                 "cuisine_type": {
                                     "type": "string",
                                     "description": "Optional cuisine filter. Use lowercase values like: 'indian', 'italian', 'mexican', 'chinese', 'thai', etc.",
-                                    "enum": ["indian", "italian", "mexican", "chinese", "thai", "american", "french", "japanese", "korean", "mediterranean"]
                                 },
                                 "meal_type": {
                                     "type": "string", 
                                     "description": "Optional meal type filter. Use lowercase values.",
-                                    "enum": ["breakfast", "lunch", "dinner", "snack", "dessert"]
                                 },
                                 "diet": {
                                     "type": "string",
                                     "description": "Optional diet filter. Use lowercase values.",
-                                    "enum": ["balanced", "high-protein", "low-carb", "low-fat", "high-fiber", "halal", "kosher", "vegetarian", "vegan"]
+                                    
                                 },
                                 "health": {
                                     "type": "string",
                                     "description": "Optional health filter. Use lowercase values.",
-                                    "enum": ["low-sodium", "dairy-free", "gluten-free", "sugar-conscious", "egg-free", "peanut-free", "tree-nut-free"]
+                                    
                                 },
                                 "multiple": {
                                     "type": "boolean",
