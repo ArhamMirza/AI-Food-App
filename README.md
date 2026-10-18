@@ -6,6 +6,10 @@ A full-stack web app that helps you decide what to cook. Chat with an AI assista
 
 ---
 
+<!-- Add a screenshot or short GIF here, e.g. ![App screenshot](docs/screenshot.png) -->
+
+**Live demo:** _add your deployed link here_
+
 ## Features
 
 - **Conversational recipe assistant.** Ask for "a high-protein vegetarian dinner" and the LLM decides when to call a recipe-search tool, passing along filters such as cuisine, meal type, diet and health restrictions.
@@ -129,7 +133,7 @@ npm install
 Create `frontend/my-react-app/.env`:
 
 ```env
-VITE_API_URL=http://localhost:8000
+VITE_API_URL=http://localhost:8000/api/v1
 VITE_FIREBASE_API_KEY=
 VITE_FIREBASE_AUTH_DOMAIN=
 VITE_FIREBASE_PROJECT_ID=
@@ -151,15 +155,17 @@ Both halves include a `vercel.json` and were deployed to Vercel. The backend COR
 ## Known limitations
 
 - Recipes are scraped from third-party pages, so quality varies by site and layouts can break the extraction.
-- A few frontend hooks (`useChat`, `useRecipe`) still point at `http://localhost:8000` and should be switched to `VITE_API_URL`.
 - No automated tests yet.
 
 ## Roadmap
 
-- Move all API URLs to environment config
 - Automated tests for the API and the chat tool-calling flow
 - Nutrition information and calorie tracking
 - Auto-generated weekly meal plans from user preferences
+
+## License
+
+Released under the [MIT License](LICENSE).
 
 ## Author
 

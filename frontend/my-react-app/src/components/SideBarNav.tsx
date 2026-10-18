@@ -140,7 +140,6 @@ const SidebarNav: React.FC<SidebarNavProps> = ({
               ${isCollapsed && !isMobile ? 'justify-center' : 'space-x-3'}
             `}
             onClick={() => {
-              console.log('Logout');
               if (isMobile) setIsSidebarOpen(false);
             }}
           >

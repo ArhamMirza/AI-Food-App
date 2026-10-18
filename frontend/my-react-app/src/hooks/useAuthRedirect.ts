@@ -12,21 +12,15 @@ export const useAuthRedirect = (onSuccess: (user: User) => void, onError: (error
 
     const checkRedirectResult = async () => {
       try {
-        console.log("[AUTH] Checking for redirect result...")
-
         // Add a small delay to ensure Firebase is fully initialized
         await new Promise((resolve) => setTimeout(resolve, 100))
 
         const result = await getRedirectResult(auth)
-        console.log(result)
 
         if (!mounted) return
 
         if (result && result.user) {
-          console.log("[AUTH] Redirect result found:", result.user.email)
           onSuccess(result.user)
-        } else {
-          console.log("[AUTH] No redirect result found")
         }
       } catch (error: any) {
         console.error("[AUTH] Redirect result error:", error)
