@@ -6,7 +6,9 @@ A full-stack web app that helps you decide what to cook. Chat with an AI assista
 
 ---
 
-<!-- Add a screenshot or short GIF here, e.g. ![App screenshot](docs/screenshot.png) -->
+![Landing page](docs/landing.jpg)
+
+<!-- Add screenshots of the chat, recipes and meal planner here -->
 
 **Live demo:** [food-ai-dun.vercel.app](https://food-ai-dun.vercel.app)
 
