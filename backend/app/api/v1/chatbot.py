@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query, Body
+from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from typing import Optional
 from app.services.chat_service import ChatService
 
@@ -9,6 +9,7 @@ from app.schemas.recipe_schema import RecipeSchema
 from app.schemas.chat_schema import ChatSchema
 
 from app.config import settings
+from app.core.auth import get_current_user_id, ensure_owner
 from app.core.utils import convert_objectid_in_doc
 from uuid import uuid4
 from pydantic import BaseModel
@@ -26,15 +27,27 @@ class CreateChatRequest(BaseModel):
 class UpdateTitleRequest(BaseModel):
     title: str
 
+async def get_owned_conversation(conversation_id: str, current_user_id: str) -> dict:
+    """Load a conversation and make sure it belongs to the authenticated user."""
+    conversation = await ChatSchema.find_by_conversation_id(conversation_id)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    ensure_owner(conversation.get("user_id"), current_user_id)
+    return conversation
+
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
     chat_message: ChatMessage,
     user_id: str = Query(...),
     conversation_id: Optional[str] = Query(None),
     search: bool = Query(False),
-    search_type: str = Query(...)
+    search_type: str = Query(...),
+    current_user_id: str = Depends(get_current_user_id)
 ):
     """Main chat endpoint"""
+    ensure_owner(user_id, current_user_id)
+    if conversation_id and await ChatSchema.find_by_conversation_id(conversation_id):
+        await get_owned_conversation(conversation_id, current_user_id)
     try:
         response, conv_id = await chat_service.process_message(
             message=chat_message.message,
@@ -50,11 +63,13 @@ async def chat(
 @router.post("/chat/create")
 async def create_chat(
     user_id: str = Query(...),
-    request: CreateChatRequest = Body(default_factory=CreateChatRequest)
+    request: CreateChatRequest = Body(default_factory=CreateChatRequest),
+    current_user_id: str = Depends(get_current_user_id)
 ):
     """
     Create a new chat conversation with a generated conversation_id, optional title, and a system message.
     """
+    ensure_owner(user_id, current_user_id)
     try:
         # Generate unique conversation_id
         conversation_id = str(uuid4())
@@ -81,16 +96,15 @@ async def create_chat(
         raise HTTPException(status_code=500, detail=f"Failed to create conversation: {str(e)}")
 
 @router.get("/chat/{conversation_id}")
-async def get_conversation(conversation_id: str):
+async def get_conversation(conversation_id: str, current_user_id: str = Depends(get_current_user_id)):
     """Retrieve a single conversation by ID"""
-    conversation = await ChatSchema.find_by_conversation_id(conversation_id)
-    if not conversation:
-        raise HTTPException(status_code=404, detail="Conversation not found")
+    conversation = await get_owned_conversation(conversation_id, current_user_id)
     return convert_objectid_in_doc(conversation)
 
 @router.get("/chat/user/{user_id}")
-async def get_conversations_by_user(user_id: str):
+async def get_conversations_by_user(user_id: str, current_user_id: str = Depends(get_current_user_id)):
     """Retrieve all conversations for a user with titles"""
+    ensure_owner(user_id, current_user_id)
     try:
         conversations = await ChatSchema.find_by_user_id(user_id)
         converted_conversations = convert_objectid_in_doc(conversations)
@@ -107,9 +121,11 @@ async def get_conversations_by_user(user_id: str):
 @router.put("/chat/{conversation_id}/title")
 async def update_conversation_title(
     conversation_id: str,
-    request: UpdateTitleRequest
+    request: UpdateTitleRequest,
+    current_user_id: str = Depends(get_current_user_id)
 ):
     """Update the title of a conversation"""
+    await get_owned_conversation(conversation_id, current_user_id)
     try:
         if not request.title or not request.title.strip():
             raise HTTPException(status_code=400, detail="Title cannot be empty")
@@ -129,16 +145,18 @@ async def update_conversation_title(
         raise HTTPException(status_code=500, detail=f"Failed to update title: {str(e)}")
 
 @router.delete("/chat/{conversation_id}")
-async def delete_conversation(conversation_id: str):
+async def delete_conversation(conversation_id: str, current_user_id: str = Depends(get_current_user_id)):
     """Delete a conversation by ID"""
+    await get_owned_conversation(conversation_id, current_user_id)
     deleted = await ChatSchema.delete(conversation_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Conversation not found or already deleted")
     return {"success": True, "message": "Conversation deleted"}
 
 @router.get("/chat/user/{user_id}/ids")
-async def list_user_conversation_ids(user_id: str):
+async def list_user_conversation_ids(user_id: str, current_user_id: str = Depends(get_current_user_id)):
     """List conversation IDs and titles for a given user"""
+    ensure_owner(user_id, current_user_id)
     try:
         conversations = await ChatSchema.find_by_user_id(user_id)
         converted_conversations = convert_objectid_in_doc(conversations)
@@ -156,8 +174,9 @@ async def list_user_conversation_ids(user_id: str):
         raise HTTPException(status_code=500, detail=f"Failed to list conversations: {str(e)}")
 
 @router.get("/chat/user/{user_id}/summary")
-async def get_user_conversations_summary(user_id: str):
+async def get_user_conversations_summary(user_id: str, current_user_id: str = Depends(get_current_user_id)):
     """Get a summary of all conversations for a user (ID, title, last message timestamp)"""
+    ensure_owner(user_id, current_user_id)
     try:
         conversations = await ChatSchema.find_by_user_id(user_id)
         converted_conversations = convert_objectid_in_doc(conversations)
@@ -190,9 +209,11 @@ async def get_user_conversations_summary(user_id: str):
 async def update_conversation_message(
     conversation_id: str,
     message_index: int,
-    request: UpdateMessageRequest
+    request: UpdateMessageRequest,
+    current_user_id: str = Depends(get_current_user_id)
 ):
     """Update a specific message in a conversation"""
+    await get_owned_conversation(conversation_id, current_user_id)
     try:
         if not request.content or not request.content.strip():
             raise HTTPException(status_code=400, detail="Content cannot be empty")
@@ -218,8 +239,9 @@ async def update_conversation_message(
         raise HTTPException(status_code=500, detail=f"Failed to update message: {str(e)}")
     
 @router.post("/chat/save-recipe")
-async def save_recipe(request: SavedRecipe):
+async def save_recipe(request: SavedRecipe, current_user_id: str = Depends(get_current_user_id)):
     """Save a recipe for a user"""
+    ensure_owner(request.user_id, current_user_id)
     try:
         if not request.content or not request.content.strip():
             raise HTTPException(status_code=400, detail="Recipe content cannot be empty")

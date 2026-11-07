@@ -109,6 +109,21 @@ class ChatSchema:
         return result.modified_count > 0
 
     @staticmethod
+    async def update_title(conversation_id: str, title: str) -> bool:
+        """
+        Rename a conversation.
+
+        Returns:
+            True if the conversation exists (even if the title is unchanged), False otherwise
+        """
+        db = await get_database()
+        result = await db.conversations.update_one(
+            {"conversation_id": conversation_id},
+            {"$set": {"title": title, "updated_at": datetime.utcnow()}}
+        )
+        return result.matched_count > 0
+
+    @staticmethod
     async def append_message(conversation_id: str, message: Dict[str, Any]) -> bool:
         """
         Append a message to a conversation's messages array.

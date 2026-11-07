@@ -9,11 +9,25 @@ from app.models.meal import (
     MealPlanWeekRequest
 )
 from app.schemas.meal_schema import MealPlanSchema
-from app.core.auth import get_token_payload
+from app.core.auth import get_current_user_id, ensure_owner
 from datetime import datetime, timedelta  
 
 
 router = APIRouter()
+
+async def get_owned_meal_plan(meal_plan_id: str, current_user_id: str) -> Dict[str, Any]:
+    """Load a meal plan and make sure it belongs to the authenticated user."""
+    try:
+        meal_plan = await MealPlanSchema.find_by_id(meal_plan_id)
+    except Exception:
+        meal_plan = None
+    if not meal_plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Meal plan not found"
+        )
+    ensure_owner(meal_plan.get("user_id"), current_user_id)
+    return meal_plan
 
 def document_to_meal_plan_response(doc: Dict[str, Any]) -> MealPlanResponse:
     """Convert MongoDB document to MealPlanResponse model"""
@@ -33,7 +47,7 @@ def document_to_meal_plan_response(doc: Dict[str, Any]) -> MealPlanResponse:
 @router.post("/", response_model=MealPlanSingleResponse)
 async def create_meal_plan(
     request: MealPlanCreateRequest,
-    token_payload: dict = Depends(get_token_payload)
+    current_user_id: str = Depends(get_current_user_id)
     ):
     """
     Create a new meal plan.
@@ -44,6 +58,7 @@ async def create_meal_plan(
     Returns:
         Created meal plan details
     """
+    ensure_owner(request.user_id, current_user_id)
     try:
         meal_plan_data = request.model_dump(exclude_unset=True)
         meal_plan = await MealPlanSchema.create(meal_plan_data)
@@ -71,7 +86,7 @@ async def create_meal_plan(
 @router.get("/user/{user_id}", response_model=MealPlanListResponse)
 async def get_meal_plans_by_user(
     user_id: str,
-    token_payload: dict = Depends(get_token_payload)
+    current_user_id: str = Depends(get_current_user_id)
     ):
     """
     Get all meal plans for a given user.
@@ -82,6 +97,7 @@ async def get_meal_plans_by_user(
     Returns:
         List of meal plans
     """
+    ensure_owner(user_id, current_user_id)
     try:
         meal_plans = await MealPlanSchema.find_by_user_id(user_id)
         return MealPlanListResponse(
@@ -98,7 +114,7 @@ async def get_meal_plans_by_user(
 @router.get("/{meal_plan_id}", response_model=MealPlanSingleResponse)
 async def get_meal_plan_by_id(
     meal_plan_id: str,
-    token_payload: dict = Depends(get_token_payload)
+    current_user_id: str = Depends(get_current_user_id)
     ):
     """
     Get a specific meal plan by its ID.
@@ -109,13 +125,8 @@ async def get_meal_plan_by_id(
     Returns:
         Single meal plan details
     """
+    meal_plan = await get_owned_meal_plan(meal_plan_id, current_user_id)
     try:
-        meal_plan = await MealPlanSchema.find_by_id(meal_plan_id)
-        if not meal_plan:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Meal plan not found"
-            )
         return MealPlanSingleResponse(
             success=True,
             data=document_to_meal_plan_response(meal_plan),
@@ -133,7 +144,7 @@ async def get_meal_plan_by_id(
 async def update_meal_plan(
     meal_plan_id: str, 
     request: MealPlanUpdateRequest, 
-    token_payload: dict = Depends(get_token_payload)
+    current_user_id: str = Depends(get_current_user_id)
     ):
     """
     Update an existing meal plan.
@@ -145,6 +156,7 @@ async def update_meal_plan(
     Returns:
         Updated meal plan details
     """
+    await get_owned_meal_plan(meal_plan_id, current_user_id)
     try:
         update_data = request.model_dump(exclude_unset=True)
         meal_plan = await MealPlanSchema.update(meal_plan_id, update_data)
@@ -172,7 +184,7 @@ async def update_meal_plan(
 @router.delete("/{meal_plan_id}", response_model=Dict[str, Any])
 async def delete_meal_plan(
     meal_plan_id: str,
-    token_payload: dict = Depends(get_token_payload)
+    current_user_id: str = Depends(get_current_user_id)
     ):
     """
     Delete a meal plan by its ID.
@@ -183,6 +195,7 @@ async def delete_meal_plan(
     Returns:
         Success status
     """
+    await get_owned_meal_plan(meal_plan_id, current_user_id)
     try:
         success = await MealPlanSchema.delete(meal_plan_id)
         if not success:
@@ -203,7 +216,7 @@ async def delete_meal_plan(
 @router.post("/week", response_model=MealPlanListResponse)
 async def get_meal_plans_for_week(
     request: MealPlanWeekRequest,
-    token_payload: dict = Depends(get_token_payload)
+    current_user_id: str = Depends(get_current_user_id)
     ):
     """
     Get meal plans for a user within a week.
@@ -214,6 +227,7 @@ async def get_meal_plans_for_week(
     Returns:
         List of meal plans for the specified week
     """
+    ensure_owner(request.user_id, current_user_id)
     try:
         # If end_date is not provided, calculate it as 6 days after start_date
         start_date = request.start_date

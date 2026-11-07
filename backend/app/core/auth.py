@@ -33,12 +33,32 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials):
 
 async def get_token_payload(credentials: HTTPAuthorizationCredentials = Depends(security)):
     payload = verify_token(credentials.credentials)
-    if not payload:
+    if not payload or payload.get("type") == "refresh":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token"
         )
     return payload
+
+
+async def get_current_user_id(payload: dict = Depends(get_token_payload)) -> str:
+    """Return the authenticated user's id (the JWT subject)."""
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token"
+        )
+    return str(user_id)
+
+
+def ensure_owner(owner_id, current_user_id: str) -> None:
+    """Raise 403 unless the resource owner is the authenticated user."""
+    if str(owner_id) != str(current_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this resource"
+        )
 
 async def get_refresh_token_payload_from_cookie(request: Request):
     refresh_token = request.cookies.get("refresh_token")

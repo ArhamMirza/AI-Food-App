@@ -7,7 +7,7 @@ from app.models.recipe import RecipeSearchRequest, RecipeSearchResponse, RecipeR
 from app.schemas.recipe_schema import RecipeSchema
 from app.services.recipe_service import handle_recipe_function_call
 from app.config import settings
-from app.core.auth import get_token_payload
+from app.core.auth import get_current_user_id, ensure_owner
 
 router = APIRouter()
 
@@ -69,7 +69,7 @@ async def search_recipes(
 @router.get("/user/{user_id}", response_model=RecipeListResponse)
 async def get_recipes_by_user(
     user_id: str,     
-    token_payload: dict = Depends(get_token_payload)
+    current_user_id: str = Depends(get_current_user_id)
 ):
     """
     Get all recipes for a given user.
@@ -80,6 +80,7 @@ async def get_recipes_by_user(
     Returns:
         List of recipes
     """
+    ensure_owner(user_id, current_user_id)
     try:
         recipes = await RecipeSchema.find_by_user_id(user_id)
         return RecipeListResponse(
@@ -95,7 +96,7 @@ async def get_recipes_by_user(
 @router.get("/{recipe_id}", response_model=RecipeSearchResponse)
 async def get_recipe_by_id(
     recipe_id: str,  
-    token_payload: dict = Depends(get_token_payload)
+    current_user_id: str = Depends(get_current_user_id)
 ):
     """
     Get a specific recipe by its ID.
@@ -109,12 +110,12 @@ async def get_recipe_by_id(
     try:
     
         recipe = await RecipeSchema.find_by_id(recipe_id)
-        print(document_to_recipe_response(recipe))
         if not recipe:
             raise HTTPException(
                 status_code=404,
                 detail="Recipe not found"
             )
+        ensure_owner(recipe.get("user_id"), current_user_id)
         return RecipeSearchResponse(
             success=True,
             data=document_to_recipe_response(recipe),
@@ -132,7 +133,7 @@ async def get_recipe_by_id(
 @router.put("/{recipe_id}", response_model=RecipeSearchResponse)
 async def update_recipe(
     recipe_id: str,
-    token_payload: dict = Depends(get_token_payload),
+    current_user_id: str = Depends(get_current_user_id),
     body: Dict[str, Any] = Body(...)
  ):
     """
@@ -156,6 +157,11 @@ async def update_recipe(
             "title": title,
             "content": {"text": content}
         }
+
+        existing = await RecipeSchema.find_by_id(recipe_id)
+        if not existing:
+            raise HTTPException(status_code=404, detail="Recipe not found or not updated")
+        ensure_owner(existing.get("user_id"), current_user_id)
 
         updated = await RecipeSchema.update(recipe_id, update_data)
 
